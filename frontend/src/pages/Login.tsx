@@ -39,9 +39,9 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // Check for admin credentials
-      if (email === 'admin@system.local' && password === 'dev-admin-key-change-in-production') {
-        await adminLogin('dev-admin-key-change-in-production');
+      // Admin login - credentials are validated on the backend
+      if (email === 'admin@system.local') {
+        await adminLogin(password);
         toast({
           title: "Admin Access Granted",
           description: "Welcome, System Administrator",
