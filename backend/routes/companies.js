@@ -1,5 +1,6 @@
 const express = require('express');
 const { authenticateToken, validateTenant } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 const { companyManager } = require('../database/database-manager');
 const logger = require('../utils/logger');
 const { asyncHandler } = require('../middleware/error-handling');
@@ -7,7 +8,7 @@ const { asyncHandler } = require('../middleware/error-handling');
 const router = express.Router();
 
 // Get all companies for user
-router.get('/', authenticateToken, validateTenant, asyncHandler(async (req, res) => {
+router.get('/', authenticateToken, validateTenant, requirePermission('companies_view'), asyncHandler(async (req, res) => {
     try {
         // Validate that user has a tenant ID
         if (!req.user.tenantId) {
@@ -33,7 +34,7 @@ router.get('/', authenticateToken, validateTenant, asyncHandler(async (req, res)
 }));
 
 // Create new company
-router.post('/', authenticateToken, validateTenant, asyncHandler(async (req, res) => {
+router.post('/', authenticateToken, validateTenant, requirePermission('companies_create'), asyncHandler(async (req, res) => {
     try {
         // Validate that user has a tenant ID
         if (!req.user.tenantId) {
@@ -75,7 +76,7 @@ router.post('/', authenticateToken, validateTenant, asyncHandler(async (req, res
 }));
 
 // Update company
-router.put('/:id', authenticateToken, validateTenant, asyncHandler(async (req, res) => {
+router.put('/:id', authenticateToken, validateTenant, requirePermission('companies_edit'), asyncHandler(async (req, res) => {
     try {
         const { id } = req.params;
 

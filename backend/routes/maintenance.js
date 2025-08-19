@@ -1,5 +1,6 @@
 const express = require('express');
 const { authenticateToken, validateTenant } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 const { 
     maintenanceManager, 
     companyManager, 
@@ -753,7 +754,7 @@ router.get('/summary', authenticateToken, validateTenant, async (req, res) => {
 });
 
 // Get maintenance preferences
-router.get('/preferences', authenticateToken, validateTenant, async (req, res) => {
+router.get('/preferences', authenticateToken, validateTenant, requirePermission('settings_view'), async (req, res) => {
     try {
         const tenant_id = req.user.tenantId;
         
@@ -846,7 +847,7 @@ router.post('/preferences', authenticateToken, validateTenant, async (req, res) 
 });
 
 // Update maintenance preferences (PUT endpoint for frontend compatibility)
-router.put('/preferences', authenticateToken, validateTenant, async (req, res) => {
+router.put('/preferences', authenticateToken, validateTenant, requirePermission('settings_edit'), async (req, res) => {
     try {
         const tenant_id = req.user.tenantId;
         const preferences = req.body;

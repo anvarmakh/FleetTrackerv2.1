@@ -1,5 +1,6 @@
 const express = require('express');
 const { authenticateToken, validateTenant } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 const { gpsProviderManager, companyManager } = require('../database/database-manager');
 const Joi = require('joi');
 const { testGPSProviderConnection } = require('../services/gps-testing');
@@ -12,7 +13,7 @@ const { isAssetActive } = require('../services/gps-testing');
 const router = express.Router();
 
 // Get all GPS providers for the tenant
-router.get('/', authenticateToken, validateTenant, asyncHandler(async (req, res) => {
+router.get('/', authenticateToken, validateTenant, requirePermission('providers_view'), asyncHandler(async (req, res) => {
     try {       
         // Get all companies for the user
         const companiesResponse = await companyManager.getUserCompanies(req.user.id, req.user.tenantId, null, { limit: 100 });
@@ -79,7 +80,7 @@ router.get('/:companyId', authenticateToken, validateTenant, asyncHandler(async 
 }));
 
 // Create a new GPS provider
-router.post('/:companyId', authenticateToken, validateTenant, asyncHandler(async (req, res) => {
+router.post('/:companyId', authenticateToken, validateTenant, requirePermission('providers_create'), asyncHandler(async (req, res) => {
     try {
         const { companyId } = req.params;
         // Validate provider payload and credentials by type
