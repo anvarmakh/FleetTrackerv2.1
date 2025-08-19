@@ -1,24 +1,16 @@
-# Simple optimized Dockerfile for Railway
+# Simple Dockerfile for Railway
 FROM node:20-alpine
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files for dependency caching
-COPY package*.json ./
-COPY frontend/package*.json ./frontend/
-COPY backend/package*.json ./backend/
-
-# Install dependencies with cache cleaning
-RUN npm ci --only=production && \
-    cd frontend && npm ci --only=production && \
-    cd ../backend && npm ci --only=production && \
-    npm cache clean --force && \
-    cd ../frontend && npm cache clean --force && \
-    cd ../backend && npm cache clean --force
-
-# Copy source code
+# Copy everything
 COPY . .
+
+# Install dependencies
+RUN npm install && \
+    cd frontend && npm install && \
+    cd ../backend && npm install
 
 # Build frontend
 RUN npm run build:frontend
