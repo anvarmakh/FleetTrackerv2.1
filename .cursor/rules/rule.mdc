@@ -1,0 +1,12 @@
+---
+alwaysApply: true
+---
+Need to use camelcase for all javascript files - both frontend and backend. If there is any disruption fix it in a way so the style of camelcase is followed. File names should not strcitly follow CamelCase rule, its applicable to variables and functions.
+Snakecase should be kept exclusively for database columns
+Translation from the styles is implemented in database utils
+SuperAdmin is system administrator, not an organization role within a tenant
+Database is splited into managers maintaining separate tasks
+
+Clean test files after test completed 
+Logic should be as flexible for all scenarios of system utilization as possible
+While creating new layout and design or any other attribute of frontend, please check /ui folder if such attribute is already developed. Dark mode UI should be respected as well

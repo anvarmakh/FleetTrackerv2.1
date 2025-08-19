@@ -1,0 +1,21 @@
+{
+	"watch": [
+		"server.js",
+		"routes",
+		"services",
+		"middleware",
+		"utils",
+		"database/managers"
+	],
+	"ignore": [
+		"database/db/**",
+		"database/utils/**",
+		"logs/**",
+		"**/*.db",
+		"**/*.db-wal",
+		"**/*.db-shm"
+	],
+	"ext": "js,json",
+	"signal": "SIGINT",
+	"delay": "200"
+}

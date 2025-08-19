@@ -1,0 +1,436 @@
+# **�� CRITICAL RULES FOR JAVASCRIPT → PYTHON TRANSLATION**
+
+## **1. 🔐 AUTHENTICATION & AUTHORIZATION RULES**
+
+### **JWT Token Structure**
+```javascript
+// JavaScript Pattern
+const tokenUser = {
+    id: 'user_id',
+    email: 'user@example.com',
+    tenantId: 'tenant_id',
+    organizationRole: 'admin|owner|user|superAdmin',
+    systemRole: 'superAdmin' // Only for system admin
+};
+```
+
+**Python Equivalent:**
+```python
+# Python Pattern
+token_user = {
+    "id": "user_id",
+    "email": "user@example.com", 
+    "tenantId": "tenant_id",
+    "organizationRole": "admin|owner|user|superAdmin",
+    "systemRole": "superAdmin"  # Only for system admin
+}
+```
+
+### **Authorization Rules**
+- **SuperAdmin bypasses** all tenant restrictions
+- **Tenant isolation** - users can only access their tenant's data
+- **Role hierarchy**: `superAdmin > owner > admin > user`
+- **Custom companies** start with `trailer_custom_comp_` prefix
+
+---
+
+## **2. 📊 DATABASE NAMING CONVENTIONS**
+
+### **Field Mapping Rules**
+```javascript
+// JavaScript camelCase → Database snake_case
+const fieldMapping = {
+    unitNumber: 'unit_number',
+    gpsEnabled: 'gps_enabled',
+    gpsStatus: 'gps_status',
+    manualLocationOverride: 'manual_location_override',
+    manualLocationNotes: 'manual_location_notes',
+    lastGpsUpdate: 'last_gps_update',
+    lastSync: 'last_sync',
+    companyId: 'company_id',
+    tenantId: 'tenant_id',
+    externalId: 'external_id',
+    providerId: 'provider_id',
+    address: 'last_address',
+    latitude: 'last_latitude',
+    longitude: 'last_longitude'
+};
+```
+
+**Python Equivalent:**
+```python
+# Python field mapping
+FIELD_MAPPING = {
+    "unitNumber": "unit_number",
+    "gpsEnabled": "gps_enabled",
+    "gpsStatus": "gps_status",
+    "manualLocationOverride": "manual_location_override",
+    "manualLocationNotes": "manual_location_notes",
+    "lastGpsUpdate": "last_gps_update",
+    "lastSync": "last_sync",
+    "companyId": "company_id",
+    "tenantId": "tenant_id",
+    "externalId": "external_id",
+    "providerId": "provider_id",
+    "address": "last_address",
+    "latitude": "last_latitude",
+    "longitude": "last_longitude"
+}
+```
+
+### **Boolean Conversion Rules**
+```javascript
+// JavaScript boolean → SQLite integer
+function booleanToInt(value) {
+    return value ? 1 : 0;
+}
+
+function intToBoolean(value) {
+    return value === 1;
+}
+```
+
+**Python Equivalent:**
+```python
+# Python boolean conversion
+def boolean_to_int(value: bool) -> int:
+    return 1 if value else 0
+
+def int_to_boolean(value: int) -> bool:
+    return value == 1
+```
+
+---
+
+## **3. 🏗️ API RESPONSE STRUCTURE**
+
+### **Standard Response Format**
+```javascript
+// JavaScript Success Response
+{
+    success: true,
+    data: result,
+    message: 'Operation completed successfully'
+}
+
+// JavaScript Error Response
+{
+    success: false,
+    error: 'Error message'
+}
+```
+
+**Python Equivalent:**
+```python
+# Python Success Response
+{
+    "success": True,
+    "data": result,
+    "message": "Operation completed successfully"
+}
+
+# Python Error Response
+{
+    "success": False,
+    "error": "Error message"
+}
+```
+
+### **HTTP Status Codes**
+```javascript
+const HTTP_STATUS = {
+    OK: 200,
+    CREATED: 201,
+    NO_CONTENT: 204,
+    BAD_REQUEST: 400,
+    UNAUTHORIZED: 401,
+    FORBIDDEN: 403,
+    NOT_FOUND: 404,
+    CONFLICT: 409,
+    UNPROCESSABLE_ENTITY: 422,
+    INTERNAL_SERVER_ERROR: 500
+};
+```
+
+---
+
+## **4. �� ERROR HANDLING PATTERNS**
+
+### **Database Error Mapping**
+```javascript
+// JavaScript Error Handling
+if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    statusCode = 400;
+    errorMessage = 'Duplicate entry - this item already exists';
+} else if (error.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') {
+    statusCode = 400;
+    errorMessage = 'Cannot delete - this item is referenced by other records';
+}
+```
+
+**Python Equivalent:**
+```python
+# Python Error Handling
+if error.code == 'SQLITE_CONSTRAINT_UNIQUE':
+    status_code = 400
+    error_message = 'Duplicate entry - this item already exists'
+elif error.code == 'SQLITE_CONSTRAINT_FOREIGNKEY':
+    status_code = 400
+    error_message = 'Cannot delete - this item is referenced by other records'
+```
+
+### **Async Error Wrapper**
+```javascript
+// JavaScript asyncHandler
+function asyncHandler(fn) {
+    return (req, res, next) => {
+        Promise.resolve(fn(req, res, next)).catch(next);
+    };
+}
+```
+
+**Python Equivalent:**
+```python
+# Python async error handler
+from functools import wraps
+from fastapi import HTTPException
+
+def async_handler(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    return wrapper
+```
+
+---
+
+## **5. �� SECURITY RULES**
+
+### **Environment Validation**
+```javascript
+// JavaScript Security Checks
+if (process.env.NODE_ENV === 'production') {
+    if (!process.env.JWT_SECRET) {
+        throw new Error('JWT_SECRET environment variable is required in production');
+    }
+    if (!process.env.ENCRYPTION_KEY) {
+        throw new Error('ENCRYPTION_KEY environment variable is required in production');
+    }
+}
+```
+
+**Python Equivalent:**
+```python
+# Python Security Checks
+import os
+
+if os.getenv('NODE_ENV') == 'production':
+    if not os.getenv('JWT_SECRET'):
+        raise ValueError('JWT_SECRET environment variable is required in production')
+    if not os.getenv('ENCRYPTION_KEY'):
+        raise ValueError('ENCRYPTION_KEY environment variable is required in production')
+```
+
+### **Rate Limiting**
+```javascript
+const RATE_LIMITS = {
+    LOGIN_ATTEMPTS: process.env.NODE_ENV === 'production' ? 3 : 5,
+    LOGIN_WINDOW: 15 * 60 * 1000, // 15 minutes
+    API_REQUESTS: process.env.NODE_ENV === 'production' ? 50 : 100,
+    API_WINDOW: 60 * 1000 // 1 minute
+};
+```
+
+---
+
+## **6. 📋 CONSTANT DEFINITIONS**
+
+### **Status Enums**
+```javascript
+const TRAILER_STATUS = {
+    AVAILABLE: 'available',
+    IN_USE: 'inUse',
+    MAINTENANCE: 'maintenance',
+    OUT_OF_SERVICE: 'outOfService'
+};
+
+const GPS_STATUS = {
+    CONNECTED: 'connected',
+    DISCONNECTED: 'disconnected',
+    UNKNOWN: 'unknown'
+};
+
+const USER_ROLES = {
+    SUPER_ADMIN: 'superAdmin',
+    OWNER: 'owner',
+    ADMIN: 'admin',
+    USER: 'user'
+};
+```
+
+**Python Equivalent:**
+```python
+from enum import Enum
+
+class TrailerStatus(str, Enum):
+    AVAILABLE = "available"
+    IN_USE = "inUse"
+    MAINTENANCE = "maintenance"
+    OUT_OF_SERVICE = "outOfService"
+
+class GpsStatus(str, Enum):
+    CONNECTED = "connected"
+    DISCONNECTED = "disconnected"
+    UNKNOWN = "unknown"
+
+class UserRoles(str, Enum):
+    SUPER_ADMIN = "superAdmin"
+    OWNER = "owner"
+    ADMIN = "admin"
+    USER = "user"
+```
+
+---
+
+## **7. �� REAL-TIME FEATURES**
+
+### **Server-Sent Events (SSE)**
+```javascript
+// JavaScript SSE Headers
+res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Headers': 'Cache-Control, Authorization'
+});
+```
+
+**Python Equivalent:**
+```python
+# Python SSE Headers
+from fastapi.responses import StreamingResponse
+
+headers = {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+    "Access-Control-Allow-Headers": "Cache-Control, Authorization"
+}
+```
+
+---
+
+## **8. 📝 LOGGING PATTERNS**
+
+### **Structured Logging**
+```javascript
+// JavaScript Logging
+logger.info('Trailer created', { 
+    trailerId: newTrailerId, 
+    companyId: targetCompany.id 
+});
+
+logger.error('Database error', { 
+    error: error.message, 
+    code: error.code 
+});
+```
+
+**Python Equivalent:**
+```python
+# Python Logging
+import logging
+
+logger.info('Trailer created', extra={
+    'trailerId': new_trailer_id,
+    'companyId': target_company.id
+})
+
+logger.error('Database error', extra={
+    'error': str(error),
+    'code': getattr(error, 'code', None)
+})
+```
+
+---
+
+## **9. 🔍 VALIDATION RULES**
+
+### **Input Sanitization**
+```javascript
+// JavaScript Sanitization
+function sanitizeSQLInput(input) {
+    if (typeof input !== 'string') return '';
+    return input.trim().substring(0, 100).replace(/[<>'"]/g, '');
+}
+```
+
+**Python Equivalent:**
+```python
+# Python Sanitization
+import re
+
+def sanitize_sql_input(input_str: str) -> str:
+    if not isinstance(input_str, str):
+        return ""
+    return re.sub(r'[<>\'"]', '', input_str.strip()[:100])
+```
+
+---
+
+## **10. 🗄️ DATABASE QUERY PATTERNS**
+
+### **Pagination**
+```javascript
+// JavaScript Pagination
+const pagination = {
+    limit: 1000,
+    offset: 0,
+    page: 1
+};
+```
+
+**Python Equivalent:**
+```python
+# Python Pagination
+pagination = {
+    "limit": 1000,
+    "offset": 0,
+    "page": 1
+}
+```
+
+### **Transaction Handling**
+```javascript
+// JavaScript Transaction
+await executeInTransaction(async (db) => {
+    // Database operations
+});
+```
+
+**Python Equivalent:**
+```python
+# Python Transaction
+async with db.transaction():
+    # Database operations
+```
+
+---
+
+## **�� CRITICAL REMINDERS**
+
+1. **API Compatibility**: Frontend expects exact response format
+2. **Tenant Isolation**: Every query must include tenant filtering
+3. **Role-Based Access**: Implement proper authorization checks
+4. **Error Consistency**: Maintain same error codes and messages
+5. **Data Types**: Preserve exact data types (especially booleans)
+6. **Real-Time Features**: SSE must work identically
+7. **Security Headers**: Maintain all security configurations
+8. **Logging**: Keep structured logging format
+9. **Validation**: Preserve all input validation rules
+10. **Constants**: Use exact same enum values
+
+**Pin these rules to ensure consistent translation!** 📌

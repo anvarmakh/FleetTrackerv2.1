@@ -1,0 +1,212 @@
+import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { LayoutDashboard, Truck, Settings, User, LogOut, ChevronDown, Shield, Users, Building } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useState, useEffect } from 'react';
+import ProfileModal from './ProfileModal';
+
+const Navigation = () => {
+  const location = useLocation();
+  const { user, logout } = useAuth();
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  
+  // Debug: Log the current user object
+  // User loaded successfully
+
+  // Hide welcome message after 1 minute
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowWelcome(false);
+    }, 60000); // 60 seconds = 1 minute
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Smart sticky navigation - hide on scroll down, show on scroll up
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Show navigation when scrolling up or at the top
+      if (currentScrollY < lastScrollY || currentScrollY < 100) {
+        setIsVisible(true);
+      } 
+      // Hide navigation when scrolling down (but not at the very top)
+      else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsVisible(false);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
+
+  // Function to generate user initials
+  const getUserInitials = (firstName?: string, lastName?: string) => {
+    if (!firstName && !lastName) return 'U';
+    
+    const first = firstName ? firstName.charAt(0).toUpperCase() : '';
+    const last = lastName ? lastName.charAt(0).toUpperCase() : '';
+    
+    const initials = first + last;
+    
+    return initials;
+  };
+  
+  // Function to get user name with fallback for both camelCase and snake_case
+  const getUserName = (user: { firstName?: string; first_name?: string }) => {
+    return user?.firstName || user?.first_name || '';
+  };
+  
+  const getUserLastName = (user: { lastName?: string; last_name?: string }) => {
+    return user?.lastName || user?.last_name || '';
+  };
+
+  const navItems = [
+    {
+      label: 'Dashboard',
+      href: '/dashboard',
+      icon: LayoutDashboard,
+    },
+    {
+      label: 'Trailers',
+      href: '/trailers',
+      icon: Truck,
+    },
+  ];
+
+  // Admin dashboard is hidden from all users - only accessible via special login
+  // No admin link shown in navigation
+
+    return (
+    <>
+      <nav className={`sticky top-0 z-50 bg-card border-b border-border px-6 py-4 transition-all duration-300 shadow-sm ${
+        isVisible ? 'translate-y-0' : '-translate-y-full'
+      }`}>
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-8">
+            <Link to="/dashboard" className="flex items-center space-x-2 transition-colors duration-150 hover:opacity-80">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <Truck className="w-4 h-4 text-primary-foreground" />
+              </div>
+              <span className="text-lg font-semibold text-foreground">FleetTracker</span>
+            </Link>
+            
+            <div className="flex items-center space-x-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.href;
+                
+                return (
+                  <Button
+                    key={item.href}
+                    asChild
+                    variant={isActive ? "default" : "ghost"}
+                    size="sm"
+                    className={cn(
+                      "gap-2 transition-colors duration-150",
+                      isActive && "bg-primary text-primary-foreground hover:bg-primary/90"
+                    )}
+                  >
+                    <Link to={item.href}>
+                      <Icon className="w-4 h-4" />
+                      {item.label}
+                    </Link>
+                  </Button>
+                );
+              })}
+
+              {/* Settings Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant={location.pathname.startsWith('/users') || location.pathname.startsWith('/settings') ? "default" : "ghost"}
+                    size="sm"
+                    className={cn(
+                      "gap-2 transition-colors duration-150",
+                      (location.pathname.startsWith('/users') || location.pathname.startsWith('/settings')) && "bg-primary text-primary-foreground hover:bg-primary/90"
+                    )}
+                  >
+                    <Settings className="w-4 h-4" />
+                    Settings
+                    <ChevronDown className="w-3 h-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48 bg-popover border border-border">
+                  <DropdownMenuItem asChild className="hover:bg-accent">
+                    <Link to="/users" className="flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      Users
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="hover:bg-accent">
+                    <Link to="/settings" className="flex items-center gap-2">
+                      <Building className="w-4 h-4" />
+                      Company
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <span 
+              className={`text-sm text-muted-foreground transition-opacity duration-500 ${
+                showWelcome ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{ 
+                visibility: showWelcome ? 'visible' : 'hidden',
+                transition: 'opacity 0.5s ease-in-out'
+              }}
+            >
+              Welcome back, {getUserName(user)}
+            </span>
+            <ThemeToggle />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center space-x-2 text-sm transition-colors duration-150">
+                  <User className="w-4 h-4" />
+                  <span>{getUserInitials(getUserName(user), getUserLastName(user))}</span>
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 bg-popover border border-border">
+                <DropdownMenuItem onClick={() => setShowProfileModal(true)} className="flex items-center gap-2 hover:bg-accent">
+                  <User className="w-4 h-4" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="flex items-center gap-2 text-destructive hover:bg-destructive/10">
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </nav>
+      
+      <ProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+      />
+    </>
+  );
+};
+
+export default Navigation;
