@@ -9,8 +9,8 @@ const path = require('path');
 const fs = require('fs');
 const logger = require('../utils/logger');
 
-// Database configuration
-const DB_DIR = path.join(__dirname, 'db');
+// Database configuration - Use Railway's persistent volume if available
+const DB_DIR = process.env.RAILWAY_VOLUME_PATH || '/app/database' || path.join(__dirname, 'db');
 const DB_PATH = path.join(DB_DIR, 'fleet_management.db');
 
 // Connection pool for production readiness
@@ -22,9 +22,20 @@ let initPromise = null;
  * Ensure database directory exists
  */
 function ensureDatabaseDirectory() {
+    logger.info('Database directory path:', DB_DIR);
+    logger.info('Database file path:', DB_PATH);
+    
     if (!fs.existsSync(DB_DIR)) {
         fs.mkdirSync(DB_DIR, { recursive: true });
         logger.info('Created database directory');
+    }
+    
+    // Check if database file exists
+    if (fs.existsSync(DB_PATH)) {
+        const stats = fs.statSync(DB_PATH);
+        logger.info('Database file exists, size:', stats.size, 'bytes');
+    } else {
+        logger.info('Database file does not exist, will be created');
     }
 }
 
@@ -484,10 +495,47 @@ function databaseExists() {
     return fs.existsSync(DB_PATH);
 }
 
+/**
+ * Check database status and log information
+ */
+async function checkDatabaseStatus() {
+    try {
+        const db = getDatabaseConnection();
+        
+        // Check if database has data
+        const userCount = await new Promise((resolve, reject) => {
+            db.get('SELECT COUNT(*) as count FROM users WHERE is_active = 1', (err, row) => {
+                if (err) reject(err);
+                else resolve(row ? row.count : 0);
+            });
+        });
+        
+        const tenantCount = await new Promise((resolve, reject) => {
+            db.get('SELECT COUNT(*) as count FROM tenants', (err, row) => {
+                if (err) reject(err);
+                else resolve(row ? row.count : 0);
+            });
+        });
+        
+        logger.info('Database status check:', {
+            users: userCount,
+            tenants: tenantCount,
+            databasePath: DB_PATH,
+            databaseExists: fs.existsSync(DB_PATH)
+        });
+        
+        return { users: userCount, tenants: tenantCount };
+    } catch (error) {
+        logger.error('Database status check failed:', error);
+        return { users: 0, tenants: 0 };
+    }
+}
+
 module.exports = {
     getDatabaseConnection,
     closeDatabaseConnection,
     databaseExists,
     initializeDatabase,
+    checkDatabaseStatus,
     DB_PATH
 };

@@ -5,7 +5,7 @@ const cors = require('cors');
 const path = require('path');
 
 // Import database initialization
-const { initializeDatabase } = require('./database/database-initializer');
+const { initializeDatabase, checkDatabaseStatus } = require('./database/database-initializer');
 
 // Import services
 const RefreshService = require('./services/auto-refresh');
@@ -245,11 +245,15 @@ async function startServer() {
         // Start services with error handling
         startAutoRefreshSystem();
         
+                // Check database status
+        const dbStatus = await checkDatabaseStatus();
+        logger.info('Database status on startup:', dbStatus);
+        
         // Start the server
         const server = app.listen(PORT, '0.0.0.0', () => {
             logger.info(`Server running at http://0.0.0.0:${PORT}`);
             logger.info(`Server started at ${new Date().toLocaleTimeString()}`);
-
+            
             if (!process.env.ADMIN_SECRET_KEY) {
                 logger.warn('Admin secret not set - using development default');
             }
