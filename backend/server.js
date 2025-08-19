@@ -132,6 +132,15 @@ app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
+// Keep-alive endpoint to prevent Railway from killing the container
+app.get('/keepalive', (req, res) => {
+    res.status(200).json({ 
+        status: 'alive', 
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
+});
+
 // ============================================================================
 // API ROUTES (must be registered before error handlers)
 // ============================================================================
@@ -312,6 +321,11 @@ process.on('warning', (warning) => {
         stack: warning.stack 
     });
 });
+
+// Keep the process alive (prevent Railway from killing it)
+setInterval(() => {
+    logger.info('Keep-alive ping - process uptime:', process.uptime());
+}, 30000); // Every 30 seconds
 
 // Additional exit diagnostics
 process.on('beforeExit', (code) => {
