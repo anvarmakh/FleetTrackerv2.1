@@ -247,6 +247,8 @@ class UserManager extends BaseManager {
      * @returns {Promise<Object|null>} User data or null if authentication fails
      */
     async authenticateUser(email, password, tenantId = null) {
+        console.log(`🔍 Authenticating user: ${email}, tenantId: ${tenantId}`);
+        
         // Fetch user with password hash
         const userRecord = await this.execute(
             `
@@ -260,19 +262,27 @@ class UserManager extends BaseManager {
         );
 
         if (!userRecord) {
+            console.log(`❌ User not found: ${email}`);
             return null;
         }
 
+        console.log(`✅ User found: ${userRecord.email}, role: ${userRecord.organizationRole}, tenant: ${userRecord.tenantId}`);
+
         // Optional tenant check if provided by client flow
         if (tenantId && userRecord.tenantId && userRecord.tenantId !== tenantId) {
+            console.log(`❌ Tenant mismatch: expected ${tenantId}, got ${userRecord.tenantId}`);
             return null;
         }
 
         // Verify password using encryption utility (bcrypt)
+        console.log(`🔐 Verifying password for user: ${userRecord.email}`);
         const isPasswordValid = await encryptionUtil.comparePassword(password, userRecord.passwordHash);
         if (!isPasswordValid) {
+            console.log(`❌ Password verification failed for user: ${userRecord.email}`);
             return null;
         }
+
+        console.log(`✅ Password verified successfully for user: ${userRecord.email}`);
 
         // Update last login timestamp
         await this.execute(

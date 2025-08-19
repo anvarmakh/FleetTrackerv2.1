@@ -21,7 +21,10 @@ router.post('/login', loginLimiter, async (req, res) => {
     try {
         const { email, password, tenantId } = req.body;
         
+        console.log(`🔐 Login attempt for email: ${email}, tenantId: ${tenantId}`);
+        
         if (!email || !password) {
+            console.log(`❌ Missing credentials: email=${!!email}, password=${!!password}`);
             return res.status(400).json({ 
                 success: false, 
                 error: 'Email and password are required' 

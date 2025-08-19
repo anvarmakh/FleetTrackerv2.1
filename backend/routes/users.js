@@ -262,7 +262,9 @@ router.post('/', authenticateToken, requirePermission('users_create'), asyncHand
     }
 
     // Hash password
+    console.log(`🔐 Hashing password for user: ${email}`);
     const hashedPassword = await encryptionUtil.hashPassword(password);
+    console.log(`✅ Password hashed successfully for user: ${email}`);
 
     // Determine tenant ID
     let targetTenantId = req.user.tenantId; // Default to current user's tenant
