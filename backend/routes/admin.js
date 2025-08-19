@@ -512,20 +512,33 @@ router.post('/users', authenticateToken, requireSuperAdmin, async (req, res) => 
             });
         }
         
-        // Generate a temporary password for the new user
-        const temporaryPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase();
+        // Use provided password or generate a temporary one
+        const password = req.body.password || (Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase());
         
         // Create new user in database
         const userData = {
             firstName: firstName || '',
             lastName: lastName || '',
             email: email,
-            password: temporaryPassword,
+            password: password,
             organizationRole: organizationRole,
             tenantId: tenantId
         };
         
         const result = await userManager.createUserWithTenant(userData);
+        
+        // Assign user to the first available company in the tenant
+        let assignedCompany = null;
+        try {
+            const companies = await companyManager.getCompaniesByTenant(tenantId);
+            if (companies && companies.length > 0) {
+                // Assign user to the first company in the tenant
+                assignedCompany = companies[0];
+                await companyManager.assignUserToCompany(result.id, assignedCompany.id);
+            }
+        } catch (error) {
+            console.warn('Could not assign user to company:', error.message);
+        }
         
         res.json({
             success: true,
@@ -537,8 +550,9 @@ router.post('/users', authenticateToken, requireSuperAdmin, async (req, res) => 
                 firstName: firstName || '',
                 lastName: lastName || '',
                 createdAt: new Date().toISOString(),
-                temporaryPassword: temporaryPassword,
-                note: 'Please provide this temporary password to the user and ask them to change it on first login'
+                password: req.body.password ? 'Password set successfully' : password,
+                assignedCompany: assignedCompany ? assignedCompany.name : 'No company assigned',
+                note: req.body.password ? 'User can login with the provided password' : 'Please provide this temporary password to the user and ask them to change it on first login'
             }
         });
     } catch (error) {

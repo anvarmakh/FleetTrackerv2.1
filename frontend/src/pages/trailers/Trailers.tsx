@@ -277,21 +277,30 @@ const Trailers = () => {
     }
   }, [trailers]);
 
-  // Load recent notes
+  // Load recent notes - optimized to load in parallel
   const loadRecentNotes = async (trailerList: Trailer[]) => {
     try {
       const notesMap: Record<string, RecentNote> = {};
       
-      for (const trailer of trailerList) {
+      // Load notes for all trailers in parallel instead of sequentially
+      const notePromises = trailerList.map(async (trailer) => {
         try {
           const response = await systemNotesAPI.getTrailerNotes(trailer.id);
           if (response.data.success && response.data.data.length > 0) {
-            notesMap[trailer.id] = response.data.data[0]; // Get most recent note
+            return { trailerId: trailer.id, note: response.data.data[0] };
           }
         } catch (error) {
           console.error(`Error loading notes for trailer ${trailer.id}:`, error);
         }
-      }
+        return null;
+      });
+      
+      const results = await Promise.all(notePromises);
+      results.forEach(result => {
+        if (result) {
+          notesMap[result.trailerId] = result.note;
+        }
+      });
       
       setRecentNotes(notesMap);
     } catch (error) {
