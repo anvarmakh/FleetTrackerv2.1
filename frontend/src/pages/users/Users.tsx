@@ -166,7 +166,7 @@ const Users = () => {
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         phone: newUser.phone,
-        organizationRole: newUser.role, // Convert 'role' to 'organizationRole'
+        role: newUser.role, // Send 'role' as expected by backend
         password: newUser.password
       };
       const response = await userAPI.createUser(userData);
