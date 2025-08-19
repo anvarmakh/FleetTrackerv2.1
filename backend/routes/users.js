@@ -127,7 +127,7 @@ router.put('/profile', authenticateToken, asyncHandler(async (req, res) => {
 }));
 
 // Get all users for the tenant
-router.get('/', authenticateToken, asyncHandler(async (req, res) => {
+router.get('/', authenticateToken, requirePermission('users_view'), asyncHandler(async (req, res) => {
   // Validate that user has a tenant ID
   if (!req.user.tenantId) {
     return res.status(400).json({

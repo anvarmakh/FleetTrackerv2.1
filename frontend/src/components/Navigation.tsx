@@ -76,18 +76,57 @@ const Navigation = () => {
     return user?.lastName || user?.last_name || '';
   };
 
+  // Define navigation items with permission requirements
   const navItems = [
     {
       label: 'Dashboard',
       href: '/dashboard',
       icon: LayoutDashboard,
+      requiredPermission: null, // Always accessible
     },
     {
       label: 'Trailers',
       href: '/trailers',
       icon: Truck,
+      requiredPermission: null, // Always accessible
     },
   ];
+
+  // Define settings dropdown items with permission requirements
+  const settingsItems = [
+    {
+      label: 'Users',
+      href: '/users',
+      icon: Users,
+      requiredPermission: 'users_view',
+    },
+    {
+      label: 'Company',
+      href: '/settings',
+      icon: Building,
+      requiredPermission: 'companies_view',
+    },
+  ];
+
+  // Filter navigation items based on user permissions
+  const hasPermission = (permission: string | null) => {
+    if (!permission) return true; // No permission required
+    if (!user?.organizationRole) return false;
+    
+    // Define permission hierarchy
+    const rolePermissions: Record<string, string[]> = {
+      'superadmin': ['users_view', 'companies_view', 'providers_view', 'settings_view', 'settings_edit'],
+      'owner': ['users_view', 'companies_view', 'providers_view', 'settings_view', 'settings_edit'],
+      'admin': ['users_view', 'companies_view', 'providers_view', 'settings_view', 'settings_edit'],
+      'manager': ['companies_view', 'providers_view'], // Managers can't manage users
+      'user': [], // Regular users have no admin permissions
+    };
+    
+    return rolePermissions[user.organizationRole]?.includes(permission) || false;
+  };
+
+  const visibleNavItems = navItems.filter(item => hasPermission(item.requiredPermission));
+  const visibleSettingsItems = settingsItems.filter(item => hasPermission(item.requiredPermission));
 
   // Admin dashboard is hidden from all users - only accessible via special login
   // No admin link shown in navigation
@@ -107,7 +146,7 @@ const Navigation = () => {
             </Link>
             
             <div className="flex items-center space-x-1">
-              {navItems.map((item) => {
+              {visibleNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.href;
                 
@@ -130,37 +169,40 @@ const Navigation = () => {
                 );
               })}
 
-              {/* Settings Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant={location.pathname.startsWith('/users') || location.pathname.startsWith('/settings') ? "default" : "ghost"}
-                    size="sm"
-                    className={cn(
-                      "gap-2 transition-colors duration-150",
-                      (location.pathname.startsWith('/users') || location.pathname.startsWith('/settings')) && "bg-primary text-primary-foreground hover:bg-primary/90"
-                    )}
-                  >
-                    <Settings className="w-4 h-4" />
-                    Settings
-                    <ChevronDown className="w-3 h-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48 bg-popover border border-border">
-                  <DropdownMenuItem asChild className="hover:bg-accent">
-                    <Link to="/users" className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      Users
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="hover:bg-accent">
-                    <Link to="/settings" className="flex items-center gap-2">
-                      <Building className="w-4 h-4" />
-                      Company
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Settings Dropdown - Only show if user has any settings permissions */}
+              {visibleSettingsItems.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant={location.pathname.startsWith('/users') || location.pathname.startsWith('/settings') ? "default" : "ghost"}
+                      size="sm"
+                      className={cn(
+                        "gap-2 transition-colors duration-150",
+                        (location.pathname.startsWith('/users') || location.pathname.startsWith('/settings')) && "bg-primary text-primary-foreground hover:bg-primary/90"
+                      )}
+                    >
+                      <Settings className="w-4 h-4" />
+                      Settings
+                      <ChevronDown className="w-3 h-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48 bg-popover border border-border">
+                    {visibleSettingsItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = location.pathname === item.href;
+                      
+                      return (
+                        <DropdownMenuItem key={item.href} asChild className="hover:bg-accent">
+                          <Link to={item.href} className="flex items-center gap-2">
+                            <Icon className="w-4 h-4" />
+                            {item.label}
+                          </Link>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
 
