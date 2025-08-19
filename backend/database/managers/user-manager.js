@@ -208,8 +208,8 @@ class UserManager extends BaseManager {
                 `, [finalTenantId, finalTenantName]);
             }
 
-            // Hash password
-            const hashedPassword = await encryptionUtil.hashPassword(password);
+            // Password is already hashed from the route, use it directly
+            const hashedPassword = password;
 
             // Generate user ID
             const userId = generateId('user');
