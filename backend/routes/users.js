@@ -288,6 +288,19 @@ router.post('/', authenticateToken, requirePermission('users_create'), asyncHand
 
     const newUser = await userManager.createUserWithTenant(userData);
 
+    // Assign user to the first available company in the tenant
+    let assignedCompany = null;
+    try {
+      const companies = await companyManager.getCompaniesByTenant(targetTenantId);
+      if (companies && companies.length > 0) {
+        // Assign user to the first company in the tenant
+        assignedCompany = companies[0];
+        await companyManager.assignUserToCompany(newUser.id, assignedCompany.id);
+      }
+    } catch (error) {
+      console.warn('Could not assign user to company:', error.message);
+    }
+
     if (newUser) {
       res.status(201).json({
         success: true,
@@ -298,7 +311,8 @@ router.post('/', authenticateToken, requirePermission('users_create'), asyncHand
           firstName: newUser.firstName,
           lastName: newUser.lastName,
           organizationRole: newUser.organizationRole,
-          tenantId: newUser.tenantId
+          tenantId: newUser.tenantId,
+          assignedCompany: assignedCompany ? assignedCompany.name : 'No company assigned'
         }
       });
     } else {

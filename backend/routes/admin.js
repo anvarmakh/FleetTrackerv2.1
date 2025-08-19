@@ -1054,6 +1054,28 @@ router.get('/orphaned-users', authenticateToken, requireSuperAdmin, async (req, 
     }
 });
 
+// Reset rate limits for testing (admin only)
+router.post('/reset-rate-limits', authenticateToken, requireSuperAdmin, async (req, res) => {
+    try {
+        // Clear rate limit data
+        const rateLimiter = require('../services/rate-limiter');
+        rateLimiter.clear();
+        
+        logger.info('Rate limits reset by admin', { adminId: req.user.id });
+        
+        res.json({
+            success: true,
+            message: 'Rate limits have been reset'
+        });
+    } catch (error) {
+        logger.error('Error resetting rate limits:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to reset rate limits'
+        });
+    }
+});
+
 // Get cache statistics
 router.get('/cache-stats', adminRateLimiter, authenticateToken, requireSuperAdmin, asyncHandler(async (req, res) => {
     const cacheStats = cacheService.getStats();

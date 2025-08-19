@@ -37,7 +37,7 @@ const ENCRYPTION_CONFIG = {
     
     // Rate limiting settings
     RATE_LIMITS: {
-        LOGIN_ATTEMPTS: process.env.NODE_ENV === 'production' ? 3 : 5,
+        LOGIN_ATTEMPTS: process.env.NODE_ENV === 'production' ? 5 : 10, // Increased for better UX
         LOGIN_WINDOW: 15 * 60 * 1000, // 15 minutes
         API_REQUESTS: process.env.NODE_ENV === 'production' ? 50 : 100,
         API_WINDOW: 60 * 1000, // 1 minute
