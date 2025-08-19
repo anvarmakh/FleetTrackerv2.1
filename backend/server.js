@@ -113,6 +113,7 @@ app.get('/api/health', (req, res) => {
         timestamp: new Date(),
         system: 'GPS Fleet Management with DOT Tenancy (Refactored)',
         version: '2.4.0',
+        port: PORT,
         features: {
             multiTenant: true,
             dotTenancy: true,
@@ -122,9 +123,13 @@ app.get('/api/health', (req, res) => {
             persistentTrailers: true,
             gpsProviders: ['spireon', 'skybitz', 'samsara'],
             modularArchitecture: true
-        },
-        demo: undefined
+        }
     });
+});
+
+// Simple health check for Railway
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
 });
 
 // ============================================================================
