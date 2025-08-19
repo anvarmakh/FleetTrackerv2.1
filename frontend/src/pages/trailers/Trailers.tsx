@@ -184,8 +184,13 @@ const Trailers = () => {
         setMaintenancePreferences(response.data.data);
       }
     } catch (error) {
-      console.error('Error loading maintenance preferences:', error);
-      // Set default preferences if loading fails
+      // Handle 403 errors gracefully for users without settings_view permission
+      if (error.response?.status === 403) {
+        console.log('User does not have permission to view maintenance preferences, using defaults');
+      } else {
+        console.error('Error loading maintenance preferences:', error);
+      }
+      // Set default preferences if loading fails or access denied
       setMaintenancePreferences({
         annual_alert_threshold: 30,
         midtrip_alert_threshold: 14,
@@ -290,7 +295,13 @@ const Trailers = () => {
             return { trailerId: trailer.id, note: response.data.data[0] };
           }
         } catch (error) {
-          console.error(`Error loading notes for trailer ${trailer.id}:`, error);
+          // Handle 404/403 errors gracefully - trailer might not have notes or user might not have access
+          if (error.response?.status === 404 || error.response?.status === 403) {
+            // This is expected for trailers without notes or access restrictions
+            return null;
+          } else {
+            console.error(`Error loading notes for trailer ${trailer.id}:`, error);
+          }
         }
         return null;
       });
