@@ -9,8 +9,8 @@ const path = require('path');
 const fs = require('fs');
 const logger = require('../utils/logger');
 
-// Database configuration - Use Railway's persistent volume if available
-const DB_DIR = process.env.RAILWAY_VOLUME_PATH || '/app/database' || path.join(__dirname, 'db');
+// Database configuration - Use Railway's persistent directory
+const DB_DIR = process.env.RAILWAY_PERSISTENT_DIR || path.join(__dirname, 'db');
 const DB_PATH = path.join(DB_DIR, 'fleet_management.db');
 
 // Connection pool for production readiness
@@ -22,20 +22,9 @@ let initPromise = null;
  * Ensure database directory exists
  */
 function ensureDatabaseDirectory() {
-    logger.info('Database directory path:', DB_DIR);
-    logger.info('Database file path:', DB_PATH);
-    
     if (!fs.existsSync(DB_DIR)) {
         fs.mkdirSync(DB_DIR, { recursive: true });
-        logger.info('Created database directory');
-    }
-    
-    // Check if database file exists
-    if (fs.existsSync(DB_PATH)) {
-        const stats = fs.statSync(DB_PATH);
-        logger.info('Database file exists, size:', stats.size, 'bytes');
-    } else {
-        logger.info('Database file does not exist, will be created');
+        logger.info('Created database directory:', DB_DIR);
     }
 }
 
