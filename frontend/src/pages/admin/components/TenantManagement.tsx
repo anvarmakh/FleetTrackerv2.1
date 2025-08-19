@@ -80,7 +80,7 @@ export function TenantManagement({
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium">{tenant.userCount || tenant.user_count || 0}</span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-muted-foreground">
                           {tenant.status === 'active' 
                             ? `${tenant.activeUserCount || tenant.active_user_count || 0} active` 
                             : `${(tenant.userCount || tenant.user_count || 0) - (tenant.activeUserCount || tenant.active_user_count || 0)} inactive`
@@ -90,12 +90,12 @@ export function TenantManagement({
                     </TableCell>
                     <TableCell>{tenant.companyCount || tenant.company_count || 0}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="bg-blue-50">
+                      <Badge variant="outline">
                         {tenant.trailerCount || tenant.trailer_count || 0}
                       </Badge>
                     </TableCell>
                     <TableCell>{tenant.providerCount || tenant.provider_count || 0}</TableCell>
-                    <TableCell className="text-sm text-gray-600">
+                    <TableCell className="text-sm text-muted-foreground">
                       {new Date(tenant.lastActivity || tenant.last_activity).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
@@ -151,16 +151,16 @@ export function TenantManagement({
                   {expandedTenants.has(tenant.tenantId) && (
                     <TableRow>
                       <TableCell colSpan={9} className="p-0">
-                        <div className="bg-gray-50 p-4 border-t">
+                        <div className="bg-muted p-4 border-t">
                           <div className="flex items-center justify-between mb-4">
                             <h4 className="font-semibold text-lg">Users for {tenant.tenantId}</h4>
                             <Badge variant="secondary">{tenant.users?.length || 0} users</Badge>
                           </div>
                           {tenant.users && tenant.users.length > 0 ? (
-                            <div className="overflow-hidden rounded-lg border bg-white">
+                            <div className="overflow-hidden rounded-lg border bg-card">
                               <Table>
                                 <TableHeader>
-                                  <TableRow className="bg-gray-50">
+                                  <TableRow className="bg-muted">
                                     <TableHead className="font-medium">Name</TableHead>
                                     <TableHead className="font-medium">Email</TableHead>
                                     <TableHead className="font-medium">Role</TableHead>
@@ -172,11 +172,11 @@ export function TenantManagement({
                                 </TableHeader>
                                 <TableBody>
                                   {tenant.users.map((user) => (
-                                    <TableRow key={user.id} className="hover:bg-gray-50">
+                                    <TableRow key={user.id} className="hover:bg-muted">
                                       <TableCell className="font-medium">
                                         {`${getUserFirstName(user)} ${getUserLastName(user)}`}
                                       </TableCell>
-                                      <TableCell className="text-blue-600">{user.email}</TableCell>
+                                      <TableCell className="text-primary">{user.email}</TableCell>
                                       <TableCell>
                                         <Badge 
                                           variant={getUserRole(user) === 'owner' ? 'default' : 
@@ -193,13 +193,13 @@ export function TenantManagement({
                                           {getUserIsActive(user) ? 'Active' : 'Inactive'}
                                         </Badge>
                                       </TableCell>
-                                      <TableCell className="text-gray-600">
+                                      <TableCell className="text-muted-foreground">
                                         {new Date(getUserCreatedAt(user)).toLocaleDateString()}
                                       </TableCell>
-                                      <TableCell className="text-gray-600">
+                                      <TableCell className="text-muted-foreground">
                                         {getUserLastLogin(user) ? 
                                           new Date(getUserLastLogin(user)!).toLocaleDateString() : 
-                                          <span className="text-gray-400">Never</span>
+                                          <span className="text-muted-foreground">Never</span>
                                         }
                                       </TableCell>
                                       <TableCell>
@@ -239,9 +239,9 @@ export function TenantManagement({
                               </Table>
                             </div>
                           ) : (
-                            <div className="text-center py-8 text-gray-500">
+                            <div className="text-center py-8 text-muted-foreground">
                               <div className="flex flex-col items-center gap-2">
-                                <Users className="w-8 h-8 text-gray-300" />
+                                <Users className="w-8 h-8 text-muted-foreground" />
                                 <span>No users found for this tenant</span>
                               </div>
                             </div>

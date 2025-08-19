@@ -23,7 +23,8 @@
     "lint:frontend": "cd frontend && npm run lint",
     "lint:backend": "cd backend && npm run lint",
     "seed": "node backend/scripts/seed-dummy-data.js",
-    "seed:reset": "node backend/scripts/seed-dummy-data.js --reset"
+    "seed:reset": "node backend/scripts/seed-dummy-data.js --reset",
+    "postinstall": "npm run build:frontend"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

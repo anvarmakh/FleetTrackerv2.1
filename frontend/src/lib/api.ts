@@ -188,6 +188,7 @@ api.interceptors.response.use(
 );
 
 export default api;
+export { api };
 
 // API functions with proper typing
 export const authAPI = {

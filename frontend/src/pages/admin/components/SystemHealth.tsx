@@ -26,9 +26,9 @@ export function SystemHealth({ health }: SystemHealthProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               <div className="flex flex-col items-center gap-2">
-                <Activity className="w-8 h-8 text-gray-300" />
+                <Activity className="w-8 h-8 text-muted-foreground" />
                 <span>System health data not available</span>
               </div>
             </div>
@@ -107,11 +107,11 @@ export function SystemHealth({ health }: SystemHealthProps) {
             </div>
             <div className="flex items-center justify-between">
               <span>Database Size</span>
-              <span className="text-sm text-gray-600">{formatBytes(health?.databaseSize || 0)}</span>
+              <span className="text-sm text-muted-foreground">{formatBytes(health?.databaseSize || 0)}</span>
             </div>
             <div className="flex items-center justify-between">
               <span>Active Connections</span>
-              <span className="text-sm text-gray-600">{health?.activeConnections || 0}</span>
+              <span className="text-sm text-muted-foreground">{health?.activeConnections || 0}</span>
             </div>
           </div>
         </CardContent>
@@ -129,26 +129,26 @@ export function SystemHealth({ health }: SystemHealthProps) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span>Server Uptime</span>
-              <span className="text-sm text-gray-600">{formatUptime(health?.serverUptime || 0)}</span>
+              <span className="text-sm text-muted-foreground">{formatUptime(health?.serverUptime || 0)}</span>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span>Memory Usage</span>
-                <span className="text-sm text-gray-600">{health?.memoryUsage?.toFixed(1) || '0.0'}%</span>
+                <span className="text-sm text-muted-foreground">{health?.memoryUsage?.toFixed(1) || '0.0'}%</span>
               </div>
               <Progress value={health?.memoryUsage || 0} className="w-full" />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span>CPU Usage</span>
-                <span className="text-sm text-gray-600">{health?.cpuUsage?.toFixed(1) || '0.0'}%</span>
+                <span className="text-sm text-muted-foreground">{health?.cpuUsage?.toFixed(1) || '0.0'}%</span>
               </div>
               <Progress value={health?.cpuUsage || 0} className="w-full" />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span>Disk Usage</span>
-                <span className="text-sm text-gray-600">{health?.diskUsage?.toFixed(1) || '0.0'}%</span>
+                <span className="text-sm text-muted-foreground">{health?.diskUsage?.toFixed(1) || '0.0'}%</span>
               </div>
               <Progress value={health?.diskUsage || 0} className="w-full" />
             </div>
@@ -169,21 +169,21 @@ export function SystemHealth({ health }: SystemHealthProps) {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span>Average Response Time</span>
-                <span className="text-sm text-gray-600">{health?.avgResponseTime || 0}ms</span>
+                <span className="text-sm text-muted-foreground">{health?.avgResponseTime || 0}ms</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>Requests per Second</span>
-                <span className="text-sm text-gray-600">{health?.requestsPerSecond || 0}</span>
+                <span className="text-sm text-muted-foreground">{health?.requestsPerSecond || 0}</span>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span>Error Rate</span>
-                <span className="text-sm text-gray-600">{(health?.errorRate || 0).toFixed(2)}%</span>
+                <span className="text-sm text-muted-foreground">{(health?.errorRate || 0).toFixed(2)}%</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>Active Sessions</span>
-                <span className="text-sm text-gray-600">{health?.activeSessions || 0}</span>
+                <span className="text-sm text-muted-foreground">{health?.activeSessions || 0}</span>
               </div>
             </div>
           </div>
@@ -202,15 +202,15 @@ export function SystemHealth({ health }: SystemHealthProps) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span>Total Storage</span>
-              <span className="text-sm text-gray-600">{formatBytes(health?.totalStorage || 0)}</span>
+              <span className="text-sm text-muted-foreground">{formatBytes(health?.totalStorage || 0)}</span>
             </div>
             <div className="flex items-center justify-between">
               <span>Used Storage</span>
-              <span className="text-sm text-gray-600">{formatBytes(health?.usedStorage || 0)}</span>
+              <span className="text-sm text-muted-foreground">{formatBytes(health?.usedStorage || 0)}</span>
             </div>
             <div className="flex items-center justify-between">
               <span>Available Storage</span>
-              <span className="text-sm text-gray-600">{formatBytes(health?.availableStorage || 0)}</span>
+              <span className="text-sm text-muted-foreground">{formatBytes(health?.availableStorage || 0)}</span>
             </div>
           </div>
         </CardContent>

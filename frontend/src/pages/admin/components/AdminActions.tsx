@@ -274,7 +274,7 @@ export function AdminActions({
               <Users className="w-6 h-6" />
               <div className="text-center">
                 <div className="font-medium">User Management</div>
-                <div className="text-sm text-gray-500">Manage system users</div>
+                <div className="text-sm text-muted-foreground">Manage system users</div>
               </div>
             </Button>
             <Button
@@ -285,7 +285,7 @@ export function AdminActions({
               <Shield className="w-6 h-6" />
               <div className="text-center">
                 <div className="font-medium">Tenant Settings</div>
-                <div className="text-sm text-gray-500">Configure tenant policies</div>
+                <div className="text-sm text-muted-foreground">Configure tenant policies</div>
               </div>
             </Button>
           </div>

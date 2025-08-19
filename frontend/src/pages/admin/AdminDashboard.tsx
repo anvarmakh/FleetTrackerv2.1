@@ -13,6 +13,7 @@ import { SystemHealth } from './components/SystemHealth';
 import { AdminActions } from './components/AdminActions';
 import TripleConfirmationDialog from '@/components/TripleConfirmationDialog';
 import SimpleConfirmationDialog from '@/components/SimpleConfirmationDialog';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const AdminDashboard = () => {
   const {
@@ -75,6 +76,7 @@ const AdminDashboard = () => {
             <p className="text-muted-foreground">System overview and management</p>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Button variant="outline" onClick={handleSignOut}>
               Sign Out
             </Button>
@@ -141,7 +143,7 @@ const AdminDashboard = () => {
                 {logs.map((log, index) => (
                   <div key={index} className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-muted-foreground">
                         {new Date(log.timestamp).toLocaleString()}
                       </span>
                       <span className={`px-2 py-1 rounded text-xs ${
@@ -154,7 +156,7 @@ const AdminDashboard = () => {
                     </div>
                     <p className="mt-2">{log.message}</p>
                     {log.tenant && (
-                      <p className="text-sm text-gray-500 mt-1">Tenant: {log.tenant}</p>
+                      <p className="text-sm text-muted-foreground mt-1">Tenant: {log.tenant}</p>
                     )}
                   </div>
                 ))}

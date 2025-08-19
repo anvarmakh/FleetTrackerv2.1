@@ -100,14 +100,14 @@ export function UserManagement({
                     {getUserIsActive(user) ? 'Active' : 'Inactive'}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-gray-600">
-                  {new Date(getUserCreatedAt(user)).toLocaleDateString()}
-                </TableCell>
-                <TableCell className="text-gray-600">
-                  {getUserLastLogin(user) ? 
-                    new Date(getUserLastLogin(user)!).toLocaleDateString() : 
-                    <span className="text-gray-400">Never</span>
-                  }
+                                    <TableCell className="text-muted-foreground">
+                      {new Date(getUserCreatedAt(user)).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {getUserLastLogin(user) ? 
+                        new Date(getUserLastLogin(user)!).toLocaleDateString() : 
+                        <span className="text-muted-foreground">Never</span>
+                      }
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">

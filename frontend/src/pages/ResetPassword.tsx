@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { authAPI } from '@/lib/api';
 import { Truck, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -118,7 +119,10 @@ const ResetPassword = () => {
 
   if (validating) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4 relative">
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-4 text-center">
             <div className="mx-auto w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
@@ -142,8 +146,8 @@ const ResetPassword = () => {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-4 text-center">
-            <div className="mx-auto w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-red-600" />
+            <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-lg flex items-center justify-center">
+              <AlertCircle className="w-6 h-6 text-destructive" />
             </div>
             <div>
               <CardTitle className="text-2xl font-semibold">Invalid Reset Link</CardTitle>
@@ -153,8 +157,8 @@ const ResetPassword = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-800 text-sm">
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+              <p className="text-destructive text-sm">
                 Please request a new password reset link from the login page.
               </p>
             </div>
@@ -171,11 +175,14 @@ const ResetPassword = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-4 text-center">
-          <div className="mx-auto w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-            <CheckCircle className="w-6 h-6 text-green-600" />
+                      <div className="mx-auto w-12 h-12 bg-success/10 rounded-lg flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-success" />
           </div>
           <div>
             <CardTitle className="text-2xl font-semibold">Reset Your Password</CardTitle>
