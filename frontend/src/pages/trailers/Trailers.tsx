@@ -287,20 +287,32 @@ const Trailers = () => {
     try {
       const notesMap: Record<string, RecentNote> = {};
       
-      // Load notes for all trailers in parallel instead of sequentially
-      const notePromises = trailerList.map(async (trailer) => {
+      // Only load notes for trailers that are likely to have them (active trailers)
+      const trailersWithNotes = trailerList.filter(trailer => 
+        ['available', 'dispatched'].includes(trailer.status.toLowerCase())
+      );
+      
+      if (trailersWithNotes.length === 0) {
+        setRecentNotes(notesMap);
+        return;
+      }
+      
+      // Load notes for active trailers in parallel
+      const notePromises = trailersWithNotes.map(async (trailer) => {
         try {
           const response = await systemNotesAPI.getTrailerNotes(trailer.id);
           if (response.data.success && response.data.data.length > 0) {
             return { trailerId: trailer.id, note: response.data.data[0] };
           }
         } catch (error) {
-          // Handle 404/403 errors gracefully - trailer might not have notes or user might not have access
+          // Handle 404/403 errors silently - trailer might not have notes or user might not have access
           if (error.response?.status === 404 || error.response?.status === 403) {
             // This is expected for trailers without notes or access restrictions
+            // Don't log these errors to avoid console spam
             return null;
           } else {
-            console.error(`Error loading notes for trailer ${trailer.id}:`, error);
+            // Only log unexpected errors
+            console.error(`Unexpected error loading notes for trailer ${trailer.id}:`, error);
           }
         }
         return null;
