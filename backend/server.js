@@ -64,7 +64,9 @@ app.use((req, res, next) => {
 // Middleware
 app.use(cors(CORS_CONFIG));
 app.use(express.json());
-app.use(express.static('public'));
+
+// Serve static files from frontend build directory
+app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 
 // ============================================================================
 // AUTO-REFRESH ROUTES (inline routes for SSE)
@@ -99,29 +101,7 @@ app.get('/api/auto-refresh/stream', (req, res) => {
     });
 });
 
-// ============================================================================
-// PAGE ROUTES
-// ============================================================================
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/settings', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'settings.html'));
-});
-
-app.get('/trailers', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'trailers.html'));
-});
-
-app.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-app.get('/login.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
 
 // ============================================================================
 // HEALTH CHECK
@@ -191,7 +171,14 @@ app.get('/api/test', (req, res) => {
     res.json({ success: true, message: 'Server is working!' });
 });
 
+// ============================================================================
+// FRONTEND ROUTES (SPA routing - must be after API routes)
+// ============================================================================
 
+// Serve React app for all non-API routes (SPA routing)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'frontend', 'dist', 'index.html'));
+});
 
 // ============================================================================
 // ERROR HANDLING MIDDLEWARE (Order matters!)
