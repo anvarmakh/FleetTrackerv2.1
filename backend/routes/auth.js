@@ -39,7 +39,13 @@ router.post('/login', loginLimiter, async (req, res) => {
         }
 
         // Get user's active company
-        const activeCompany = await companyManager.getActiveCompany(user.id, user.tenantId);
+        let activeCompany = null;
+        try {
+            activeCompany = await companyManager.getActiveCompany(user.id, user.tenantId);
+        } catch (error) {
+            logger.warn(`Could not get active company for user ${user.id}:`, error.message);
+            // Continue without active company - user can still login
+        }
         
         // Create user data for token
         const userData = {

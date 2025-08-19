@@ -384,20 +384,21 @@ class CompanyManager extends BaseManager {
             let activeCompany = await executeQueryFirstCamelCase(this.db, query, params);
 
             if (!activeCompany) {
-                // Try to find any company for the user as fallback
+                // Try to find any company in the tenant as fallback
                 let fallbackQuery;
                 if (tenantId && tenantId.trim()) {
-                    fallbackQuery = 'SELECT * FROM companies WHERE user_id = ? AND tenant_id = ? AND is_active = 1 ORDER BY created_at ASC LIMIT 1';
-                    params = [userId, tenantId];
+                    fallbackQuery = 'SELECT * FROM companies WHERE tenant_id = ? AND is_active = 1 ORDER BY created_at ASC LIMIT 1';
+                    params = [tenantId];
                 } else {
-                    fallbackQuery = 'SELECT * FROM companies WHERE user_id = ? AND is_active = 1 ORDER BY created_at ASC LIMIT 1';
-                    params = [userId];
+                    // If no tenant specified, try to find any company
+                    fallbackQuery = 'SELECT * FROM companies WHERE is_active = 1 ORDER BY created_at ASC LIMIT 1';
+                    params = [];
                 }
                 
                 activeCompany = await executeQueryFirstCamelCase(this.db, fallbackQuery, params);
                 
                 if (activeCompany) {
-                    // Set this company as active
+                    // Set this company as active for the user
                     await this.setActiveCompany(userId, activeCompany.id);
                 }
             }
