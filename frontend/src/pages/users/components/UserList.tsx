@@ -29,6 +29,7 @@ const UserList: React.FC<UserListProps> = ({
   const getUserRoleBadge = (role: string) => {
     const roleConfig = {
       superadmin: { label: 'Super Admin', className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400' },
+      owner: { label: 'Owner', className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400' },
       admin: { label: 'Admin', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' },
       manager: { label: 'Manager', className: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' },
       user: { label: 'User', className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' }

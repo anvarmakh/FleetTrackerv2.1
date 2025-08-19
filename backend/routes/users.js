@@ -6,7 +6,7 @@ const {
     getUserPermissions,
     getAssignableRoles 
 } = require('../middleware/permissions');
-const { userManager, permissionsManager, PermissionsManager } = require('../database/database-manager');
+const { userManager, companyManager, permissionsManager, PermissionsManager } = require('../database/database-manager');
 const { validatePassword, ENCRYPTION_CONFIG } = require('../utils/security-config');
 const { USER_ROLES, ROLE_HIERARCHY } = require('../utils/constants');
 const { isValidEmail } = require('../utils/validation');
