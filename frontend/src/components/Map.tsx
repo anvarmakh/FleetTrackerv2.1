@@ -78,7 +78,7 @@ const Map: React.FC<MapProps> = ({ trailers }) => {
         map.current.removeSource('trailers');
       }
     } catch (error) {
-      console.log('Error removing existing trailer data:', error);
+  
     }
 
     // Filter trailers with valid coordinates
@@ -88,10 +88,7 @@ const Map: React.FC<MapProps> = ({ trailers }) => {
       return lat && lng;
     });
     
-    console.log(`Valid trailers with coordinates: ${validTrailers.length} out of ${trailers.length}`);
-    
     if (validTrailers.length === 0) {
-      console.log('No trailers with valid coordinates to display - map cleared');
       return;
     }
 
@@ -350,8 +347,7 @@ const Map: React.FC<MapProps> = ({ trailers }) => {
 
   // Update data when trailers change
   useEffect(() => {
-    console.log('Trailers changed:', trailers.length, 'trailers');
-    console.log('Map ready:', map.current);
+
     
     // Close any existing popup when data changes
     if (currentPopup.current) {
@@ -360,20 +356,20 @@ const Map: React.FC<MapProps> = ({ trailers }) => {
     }
     
     if (map.current && Array.isArray(trailers)) {
-      console.log('Calling addTrailerData');
+  
       addTrailerData();
     }
   }, [trailers, addTrailerData]);
 
   useEffect(() => {
     if (isTokenSet && !map.current) {
-      console.log('Initializing Mapbox...');
+  
       initializeMap();
     }
     
     return () => {
       if (map.current) {
-        console.log('Cleaning up map...');
+    
         try {
           // Remove all event listeners first
           map.current.off('load');
@@ -391,7 +387,7 @@ const Map: React.FC<MapProps> = ({ trailers }) => {
           // Remove the map
           map.current.remove();
         } catch (error) {
-          console.log('Error during map cleanup:', error);
+  
         } finally {
           // Ensure map reference is cleared
           map.current = null;

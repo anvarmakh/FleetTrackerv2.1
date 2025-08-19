@@ -97,7 +97,7 @@ const TrailerEditModal: React.FC<TrailerEditModalProps> = ({
         }
       } else {
         // Use regular save for non-maintenance changes
-        console.log('🔍 Saving trailer data:', updateData);
+    
         await onSave(trailer.id, updateData);
       }
       

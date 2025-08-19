@@ -7,13 +7,12 @@ import { useNavigate } from 'react-router-dom';
 import SettingsLayout from './components/SettingsLayout';
 import CompanySettings from './components/CompanySettings';
 import ProviderSettings from './components/ProviderSettings';
-import PreferencesSettings from './components/PreferencesSettings';
+
 import MaintenanceSettings from './components/MaintenanceSettings';
 import { 
   Company, 
   Provider, 
-  MaintenancePreferences, 
-  UserPreferences 
+  MaintenancePreferences
 } from '@/types';
 
 const Settings = () => {
@@ -28,14 +27,7 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('company');
 
-  // Preferences States
-  const [preferences, setPreferences] = useState<UserPreferences>({
-    timezone: 'America/New_York',
-    language: 'en',
-    theme: 'light',
-    notifications: { email: true, push: true, sms: false },
-    display: { showTrailerCount: true, showLastSync: true, autoRefresh: true, refreshInterval: 30 }
-  });
+
 
   const [maintenancePreferences, setMaintenancePreferences] = useState<MaintenancePreferences>({
     annual_inspection_interval: 365,
@@ -53,7 +45,7 @@ const Settings = () => {
   const loadSettingsData = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('🔍 Loading settings data for user:', user);
+  
       
       const [companiesResponse, activeCompanyResponse, providersResponse, maintenancePrefsResponse] = await Promise.allSettled([
         companyAPI.getCompanies(),
@@ -86,12 +78,9 @@ const Settings = () => {
       if (providersResponse.status === 'fulfilled') {
         const response = providersResponse.value;
         const responseData = response.data as any;
-        console.log('🔍 Providers response:', responseData);
         if (responseData && responseData.success) {
-          console.log('🔍 Setting providers:', responseData.data);
           setProviders(responseData.data);
         } else if (Array.isArray(responseData)) {
-          console.log('🔍 Setting providers (direct array):', responseData);
           setProviders(responseData);
         }
       }
@@ -160,12 +149,7 @@ const Settings = () => {
         />
       </TabsContent>
 
-      <TabsContent value="preferences">
-        <PreferencesSettings 
-          preferences={preferences} 
-          onPreferencesChange={setPreferences} 
-        />
-      </TabsContent>
+
 
       <TabsContent value="maintenance">
         <MaintenanceSettings 

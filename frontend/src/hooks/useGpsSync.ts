@@ -18,13 +18,13 @@ export const useGpsSync = (onRefreshComplete?: () => void): UseGpsSyncReturn => 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-              console.log('📍 Starting location refresh...');
+          
         
         // Use the location refresh service
         const response = await refreshAPI.refreshLocations();
         
         if (response.data.success) {
-          console.log('✅ Location refresh started successfully');
+  
           
           toast({
             title: "Location Refresh Started",
@@ -33,7 +33,7 @@ export const useGpsSync = (onRefreshComplete?: () => void): UseGpsSyncReturn => 
         
         // Call the completion callback to reload data
         if (onRefreshComplete) {
-          console.log('🔄 Reloading dashboard data after GPS sync...');
+  
           await onRefreshComplete();
         }
       } else {

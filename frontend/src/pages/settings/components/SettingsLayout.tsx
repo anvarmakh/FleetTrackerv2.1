@@ -1,7 +1,7 @@
 import React from 'react';
 import Navigation from '@/components/Navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building, Wifi, Settings as SettingsIcon, Wrench } from 'lucide-react';
+import { Building, Wifi, Wrench } from 'lucide-react';
 
 interface SettingsLayoutProps {
   children: React.ReactNode;
@@ -25,7 +25,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({
           </div>
 
           <Tabs value={activeTab} onValueChange={onTabChange} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="company" className="gap-2">
                 <Building className="w-4 h-4" />
                 Company
@@ -33,10 +33,6 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({
               <TabsTrigger value="providers" className="gap-2">
                 <Wifi className="w-4 h-4" />
                 GPS Providers
-              </TabsTrigger>
-              <TabsTrigger value="preferences" className="gap-2">
-                <SettingsIcon className="w-4 h-4" />
-                Preferences
               </TabsTrigger>
               <TabsTrigger value="maintenance" className="gap-2">
                 <Wrench className="w-4 h-4" />

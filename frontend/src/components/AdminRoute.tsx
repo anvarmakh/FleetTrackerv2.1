@@ -13,13 +13,6 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
 
   // Check for SuperAdmin access only
   const isSuperAdmin = user?.organizationRole === 'superAdmin';
-  
-  console.log('🔐 AdminRoute check:', { 
-    user, 
-    isSuperAdmin,
-    systemRole: user?.systemRole,
-    organizationRole: user?.organizationRole
-  });
 
   // Allow access only if user has SuperAdmin role
   if (!isSuperAdmin) {

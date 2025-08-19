@@ -5,8 +5,7 @@ export const buildCredentials = (providerType: string, provider: EditingProvider
     const filtered = Object.fromEntries(
       Object.entries(obj).filter(([_, value]) => value !== undefined && value !== null && value !== '')
     );
-    console.log('🔍 buildCredentials - Original object:', obj);
-    console.log('🔍 buildCredentials - Filtered object:', filtered);
+    
     return filtered;
   };
 
