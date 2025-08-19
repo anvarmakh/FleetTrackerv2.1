@@ -412,8 +412,8 @@ class UserManager extends BaseManager {
         const dataQuery = `
             SELECT u.id, u.email, u.first_name, u.last_name, u.phone, u.timezone, u.language,
                    u.tenant_id, u.organization_role, u.created_at, u.last_login, u.is_active,
-                   ucp.active_company_id as company_id,
-                   c.name as company_name
+                   ucp.active_company_id as companyId,
+                   c.name as companyName
             FROM users u
             LEFT JOIN user_company_preferences ucp ON u.id = ucp.user_id
             LEFT JOIN companies c ON ucp.active_company_id = c.id

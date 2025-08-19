@@ -538,6 +538,67 @@ class CompanyManager extends BaseManager {
             throw error;
         }
     }
+
+    /**
+     * Assign user to a company
+     * @param {string} userId - User ID
+     * @param {string} companyId - Company ID
+     * @returns {Promise<Object>} Assignment result
+     */
+    async assignUserToCompany(userId, companyId) {
+        try {
+            if (!userId || !companyId) {
+                throw new Error('User ID and Company ID are required');
+            }
+
+            // Verify company exists and is active
+            const company = await this.getCompanyById(companyId);
+            if (!company || !company.isActive) {
+                throw new Error('Company not found or inactive');
+            }
+
+            // Set user's active company via preferences table
+            await executeSingleQuery(this.db, `
+                INSERT OR REPLACE INTO user_company_preferences (id, user_id, active_company_id, updated_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            `, [`pref_${userId}`, userId, companyId]);
+
+            // Clear cache for user
+            cacheService.delete(`${CACHE_KEYS.USER_PROFILE}:${userId}`);
+
+            console.log(`✅ User ${userId} assigned to company ${companyId}`);
+            return { success: true, userId, companyId };
+        } catch (error) {
+            console.error('❌ Error assigning user to company:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get user's active company
+     * @param {string} userId - User ID
+     * @returns {Promise<Object|null>} Active company or null
+     */
+    async getUserActiveCompany(userId) {
+        try {
+            if (!userId) {
+                return null;
+            }
+
+            const query = `
+                SELECT c.*
+                FROM companies c
+                INNER JOIN user_company_preferences ucp ON c.id = ucp.active_company_id
+                WHERE ucp.user_id = ? AND c.is_active = 1
+            `;
+
+            const company = await executeQueryFirstCamelCase(this.db, query, [userId]);
+            return company;
+        } catch (error) {
+            console.error('❌ Error getting user active company:', error);
+            return null;
+        }
+    }
 }
 
 module.exports = CompanyManager;

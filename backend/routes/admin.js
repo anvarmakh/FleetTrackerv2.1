@@ -535,25 +535,29 @@ router.post('/users', authenticateToken, requireSuperAdmin, async (req, res) => 
                 // Assign user to the first company in the tenant
                 assignedCompany = companies[0];
                 await companyManager.assignUserToCompany(result.id, assignedCompany.id);
+                console.log(`✅ Admin user ${result.id} assigned to company ${assignedCompany.name} (${assignedCompany.id})`);
+            } else {
+                console.warn(`⚠️ No companies found in tenant ${tenantId} for admin user assignment`);
             }
         } catch (error) {
-            console.warn('Could not assign user to company:', error.message);
+            console.error('❌ Could not assign admin user to company:', error.message);
         }
         
         res.json({
             success: true,
             message: 'User created successfully',
-            data: {
-                email,
-                tenantId,
-                organizationRole,
-                firstName: firstName || '',
-                lastName: lastName || '',
-                createdAt: new Date().toISOString(),
-                password: req.body.password ? 'Password set successfully' : password,
-                assignedCompany: assignedCompany ? assignedCompany.name : 'No company assigned',
-                note: req.body.password ? 'User can login with the provided password' : 'Please provide this temporary password to the user and ask them to change it on first login'
-            }
+                              data: {
+                      email,
+                      tenantId,
+                      organizationRole,
+                      firstName: firstName || '',
+                      lastName: lastName || '',
+                      createdAt: new Date().toISOString(),
+                      password: req.body.password ? 'Password set successfully' : password,
+                      companyId: assignedCompany ? assignedCompany.id : null,
+                      companyName: assignedCompany ? assignedCompany.name : null,
+                      note: req.body.password ? 'User can login with the provided password' : 'Please provide this temporary password to the user and ask them to change it on first login'
+                  }
         });
     } catch (error) {
         console.error('Create user error:', error);

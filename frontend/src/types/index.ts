@@ -12,6 +12,7 @@ export interface User {
   systemRole?: string;
   tenantId?: string;
   companyId?: string;
+  companyName?: string;
   createdAt?: string;
   lastLogin?: string;
   isActive?: boolean;
