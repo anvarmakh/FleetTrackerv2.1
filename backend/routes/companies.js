@@ -7,7 +7,33 @@ const { asyncHandler } = require('../middleware/error-handling');
 
 const router = express.Router();
 
-// Get all companies for user
+// Get companies for filtering (available to all users)
+router.get('/filter', authenticateToken, validateTenant, asyncHandler(async (req, res) => {
+    try {
+        // Validate that user has a tenant ID
+        if (!req.user.tenantId) {
+            return res.json({
+                success: true,
+                companies: [],
+                message: 'No tenant assigned yet'
+            });
+        }
+
+        const companiesResponse = await companyManager.getUserCompanies(req.user.id, req.user.tenantId, req.user.organizationRole || 'user', { limit: 100 });
+        res.json({ 
+            success: true,
+            companies: companiesResponse.data || []
+        });
+    } catch (error) {
+        console.error('Error fetching companies for filtering:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Failed to fetch companies' 
+        });
+    }
+}));
+
+// Get all companies for user (requires companies_view permission)
 router.get('/', authenticateToken, validateTenant, requirePermission('companies_view'), asyncHandler(async (req, res) => {
     try {
         // Validate that user has a tenant ID

@@ -170,7 +170,7 @@ const Dashboard = () => {
       const [statsResponse, trailersResponse, companiesResponse, customCompaniesResponse] = await Promise.all([
         trailerAPI.getStats(),
         trailerAPI.getTrailers(),
-        companyAPI.getCompanies(),
+        companyAPI.getCompaniesForFilter(),
         trailerCustomCompaniesAPI.getCustomCompanies(),
       ]);
 

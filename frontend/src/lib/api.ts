@@ -241,6 +241,7 @@ export const userAPI = {
 
 export const companyAPI = {
   getCompanies: () => api.get<CompanyData[]>('/api/companies'),
+  getCompaniesForFilter: () => api.get<CompanyData[]>('/api/companies/filter'),
   getUserCompanies: () => api.get<CompanyData[]>('/api/companies'),
   createCompany: (data: Omit<CompanyData, 'id' | 'createdAt' | 'updatedAt'>) => api.post<CompanyData>('/api/companies', data),
   updateCompany: (id: string, data: Partial<CompanyData>) => api.put<CompanyData>(`/api/companies/${id}`, data),

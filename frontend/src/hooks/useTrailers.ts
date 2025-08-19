@@ -136,7 +136,7 @@ export const useTrailers = (): UseTrailersReturn => {
       const [trailersResponse, statsResponse, companiesResponse, customCompaniesResponse] = await Promise.all([
         trailerAPI.getTrailers(),
         trailerAPI.getStats(),
-        companyAPI.getUserCompanies(),
+        companyAPI.getCompaniesForFilter(),
         trailerCustomCompaniesAPI.getCustomCompanies()
       ]);
       

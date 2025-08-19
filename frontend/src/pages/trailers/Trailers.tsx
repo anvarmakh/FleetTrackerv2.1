@@ -220,7 +220,7 @@ const Trailers = () => {
       await loadRecentNotes(trailerData);
 
       // Load companies
-      const companiesResponse = await companyAPI.getCompanies();
+      const companiesResponse = await companyAPI.getCompaniesForFilter();
       
       let companies = [];
       if (companiesResponse.data && companiesResponse.data.success) {
