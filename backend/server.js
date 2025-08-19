@@ -127,10 +127,12 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Simple health check for Railway
+// Simple health check for Railway (responds immediately)
 app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
+
+
 
 
 
@@ -176,6 +178,15 @@ logger.info('All API routes registered successfully');
 // Add a test route to verify server is working
 app.get('/api/test', (req, res) => {
     res.json({ success: true, message: 'Server is working!' });
+});
+
+// Root endpoint for Railway health check
+app.get('/', (req, res) => {
+    res.status(200).json({ 
+        status: 'OK', 
+        message: 'FleetTracker API is running',
+        timestamp: new Date().toISOString()
+    });
 });
 
 // ============================================================================
