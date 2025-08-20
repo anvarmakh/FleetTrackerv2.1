@@ -9,6 +9,7 @@ import CompanySettings from './components/CompanySettings';
 import ProviderSettings from './components/ProviderSettings';
 
 import MaintenanceSettings from './components/MaintenanceSettings';
+import PreferencesSettings from './components/PreferencesSettings';
 import { 
   Company, 
   Provider, 
@@ -20,10 +21,51 @@ const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Check if user has settings permissions (using new permission system)
-  const hasSettingsAccess = user?.organizationRole === 'owner' || user?.organizationRole === 'admin' || user?.organizationRole === 'manager';
-  
-  if (!hasSettingsAccess) {
+  // State for user permissions
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
+
+  // Load user permissions
+  useEffect(() => {
+    const loadUserPermissions = async () => {
+      try {
+        setPermissionsLoading(true);
+        // This would typically come from your auth context or API
+        // For now, we'll use the role-based permissions
+        const rolePermissions: Record<string, string[]> = {
+          'superadmin': ['companies_view', 'providers_view', 'maintenance_settings_view', 'company_preferences_view'],
+          'owner': ['companies_view', 'providers_view', 'maintenance_settings_view', 'company_preferences_view'],
+          'admin': ['companies_view', 'providers_view', 'maintenance_settings_view', 'company_preferences_view'],
+          'manager': ['companies_view', 'providers_view'],
+          'user': [],
+        };
+        
+        const permissions = rolePermissions[user?.organizationRole || 'user'] || [];
+        setUserPermissions(permissions);
+      } catch (error) {
+        console.error('Error loading user permissions:', error);
+      } finally {
+        setPermissionsLoading(false);
+      }
+    };
+
+    loadUserPermissions();
+  }, [user?.organizationRole]);
+
+  // Check user permissions for UI feedback
+  const hasPermission = (permission: string) => {
+    return userPermissions.includes(permission);
+  };
+
+  const canViewCompanies = hasPermission('companies_view');
+  const canViewProviders = hasPermission('providers_view');
+  const canViewMaintenanceSettings = hasPermission('maintenance_settings_view');
+  const canViewCompanyPreferences = hasPermission('company_preferences_view');
+
+  // Check if user has access to any settings tab
+  const hasAnySettingsAccess = canViewCompanies || canViewProviders || canViewMaintenanceSettings || canViewCompanyPreferences;
+
+  if (!hasAnySettingsAccess) {
     return (
       <div className="container mx-auto p-6">
         <div className="max-w-md mx-auto mt-20">
@@ -35,7 +77,7 @@ const Settings = () => {
             </div>
             <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
             <p className="text-muted-foreground mb-4">
-              You don't have permission to access settings. Only owners and admins can access this area.
+              You don't have permission to access any settings. Contact your administrator for access.
             </p>
             <button
               onClick={() => navigate('/dashboard')}
@@ -151,9 +193,17 @@ const Settings = () => {
   };
 
   // Loading State
-  if (loading) {
+  if (loading || permissionsLoading) {
     return (
-      <SettingsLayout activeTab={activeTab} onTabChange={setActiveTab}>
+      <SettingsLayout 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab}
+        canViewCompanies={canViewCompanies}
+        canViewProviders={canViewProviders}
+        canViewMaintenanceSettings={canViewMaintenanceSettings}
+        canViewCompanyPreferences={canViewCompanyPreferences}
+        isDataReady={!loading && !permissionsLoading}
+      >
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
@@ -162,29 +212,65 @@ const Settings = () => {
   }
 
   return (
-    <SettingsLayout activeTab={activeTab} onTabChange={setActiveTab}>
+    <SettingsLayout 
+      activeTab={activeTab} 
+      onTabChange={setActiveTab}
+      canViewCompanies={canViewCompanies}
+      canViewProviders={canViewProviders}
+      canViewMaintenanceSettings={canViewMaintenanceSettings}
+      canViewCompanyPreferences={canViewCompanyPreferences}
+      isDataReady={!loading && !permissionsLoading}
+    >
       <TabsContent value="company">
-        <CompanySettings 
-          companies={companies} 
-          onRefresh={loadSettingsData} 
-        />
+        {canViewCompanies ? (
+          <CompanySettings 
+            companies={companies} 
+            onRefresh={loadSettingsData} 
+          />
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">You don't have permission to view company settings.</p>
+          </div>
+        )}
       </TabsContent>
 
       <TabsContent value="providers">
-        <ProviderSettings 
-          providers={providers} 
-          companies={companies} 
-          onRefresh={loadSettingsData} 
-        />
+        {canViewProviders ? (
+          <ProviderSettings 
+            providers={providers} 
+            companies={companies} 
+            onRefresh={loadSettingsData} 
+          />
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">You don't have permission to view GPS providers.</p>
+          </div>
+        )}
       </TabsContent>
 
-
-
       <TabsContent value="maintenance">
-        <MaintenanceSettings 
-          maintenancePreferences={maintenancePreferences} 
-          onMaintenancePreferencesChange={setMaintenancePreferences} 
-        />
+        {canViewMaintenanceSettings ? (
+          <MaintenanceSettings 
+            maintenancePreferences={maintenancePreferences} 
+            onMaintenancePreferencesChange={setMaintenancePreferences} 
+          />
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">You don't have permission to view maintenance settings.</p>
+          </div>
+        )}
+      </TabsContent>
+
+      <TabsContent value="preferences">
+        {canViewCompanyPreferences ? (
+          <PreferencesSettings 
+            // Add preferences data and handlers here
+          />
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">You don't have permission to view company preferences.</p>
+          </div>
+        )}
       </TabsContent>
     </SettingsLayout>
   );

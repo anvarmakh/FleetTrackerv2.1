@@ -65,16 +65,20 @@ const MAINTENANCE_SEVERITY = {
 
 // User Roles
 const USER_ROLES = {
-    SUPER_ADMIN: 'superAdmin',
-    OWNER: 'owner',
-    ADMIN: 'admin',
-    USER: 'user'
+    SYSTEM_ADMIN: 'systemAdmin',  // System-level administrator (renamed from SUPER_ADMIN)
+    OWNER: 'owner',               // Organization owner
+    ADMIN: 'admin',               // Organization admin  
+    MANAGER: 'manager',           // Organization manager
+    USER: 'user'                  // Regular user
 };
 
 const ROLE_HIERARCHY = {
-    'owner': ['admin', 'user'],
-    'admin': ['user'],
-    'user': []
+    'systemAdmin': ['systemAdmin', 'owner', 'admin', 'manager', 'user', 'viewer'],  // System admin can assign any role
+    'owner': ['owner', 'admin', 'manager', 'user', 'viewer'],                       // Owner can assign org roles
+    'admin': ['admin', 'manager', 'user', 'viewer'],                                // Admin can assign lower roles
+    'manager': ['manager', 'user', 'viewer'],                                       // Manager can assign user role
+    'user': ['user', 'viewer'],                                                     // User can assign viewer role
+    'viewer': ['viewer']                                                            // Viewer can't assign roles
 };
 
 // HTTP Status Codes

@@ -50,8 +50,6 @@ class PermissionsManager extends BaseManager {
         TRAILERS_CREATE: 'trailers_create',
         TRAILERS_EDIT: 'trailers_edit',
         TRAILERS_DELETE: 'trailers_delete',
-        TRAILERS_LOCATION: 'trailers_location',
-        TRAILERS_HISTORY: 'trailers_history',
         
         // Fleet Management - Locations
         LOCATIONS_VIEW: 'locations_view',
@@ -64,7 +62,6 @@ class PermissionsManager extends BaseManager {
         MAINTENANCE_CREATE: 'maintenance_create',
         MAINTENANCE_EDIT: 'maintenance_edit',
         MAINTENANCE_DELETE: 'maintenance_delete',
-        MAINTENANCE_ALERTS: 'maintenance_alerts',
         
         // Fleet Management - Notes
         NOTES_VIEW: 'notes_view',
@@ -78,7 +75,12 @@ class PermissionsManager extends BaseManager {
         USERS_CREATE: 'users_create',
         USERS_EDIT: 'users_edit',
         USERS_DELETE: 'users_delete',
-        USERS_ROLES: 'users_roles',
+        
+        // Organization Management - Roles (CRUD operations)
+        ROLES_VIEW: 'roles_view',
+        ROLES_CREATE: 'roles_create',
+        ROLES_EDIT: 'roles_edit',
+        ROLES_DELETE: 'roles_delete',
         
         // Organization Management - Companies
         COMPANIES_VIEW: 'companies_view',
@@ -95,18 +97,17 @@ class PermissionsManager extends BaseManager {
         PROVIDERS_TEST: 'providers_test',
         
         // Organization Management - Settings
-        SETTINGS_VIEW: 'settings_view',
-        SETTINGS_EDIT: 'settings_edit',
-        SETTINGS_MAINTENANCE: 'settings_maintenance',
-        SETTINGS_NOTIFICATIONS: 'settings_notifications',
+        MAINTENANCE_SETTINGS_VIEW: 'maintenance_settings_view',
+        MAINTENANCE_SETTINGS_EDIT: 'maintenance_settings_edit',
+        COMPANY_PREFERENCES_VIEW: 'company_preferences_view',
+        COMPANY_PREFERENCES_EDIT: 'company_preferences_edit',
         
         // Analytics & Reports
         REPORTS_VIEW: 'reports_view',
         REPORTS_EXPORT: 'reports_export',
         REPORTS_ADVANCED: 'reports_advanced',
         
-        // Geocoding (utility service)
-        GEOCODING_VIEW: 'geocoding_view'
+
     };
 
     // Permission inheritance mapping (block → granular)
@@ -116,8 +117,7 @@ class PermissionsManager extends BaseManager {
             PermissionsManager.GRANULAR_PERMISSIONS.TRAILERS_VIEW,
             PermissionsManager.GRANULAR_PERMISSIONS.LOCATIONS_VIEW,
             PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_VIEW,
-            PermissionsManager.GRANULAR_PERMISSIONS.NOTES_VIEW,
-            PermissionsManager.GRANULAR_PERMISSIONS.GEOCODING_VIEW
+            PermissionsManager.GRANULAR_PERMISSIONS.NOTES_VIEW
         ],
         
         [PermissionsManager.BLOCK_PERMISSIONS.FLEET_CREATE]: [
@@ -129,10 +129,8 @@ class PermissionsManager extends BaseManager {
         
         [PermissionsManager.BLOCK_PERMISSIONS.FLEET_EDIT]: [
             PermissionsManager.GRANULAR_PERMISSIONS.TRAILERS_EDIT,
-            PermissionsManager.GRANULAR_PERMISSIONS.TRAILERS_LOCATION,
             PermissionsManager.GRANULAR_PERMISSIONS.LOCATIONS_EDIT,
             PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_EDIT,
-            PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_ALERTS,
             PermissionsManager.GRANULAR_PERMISSIONS.NOTES_EDIT,
             PermissionsManager.GRANULAR_PERMISSIONS.NOTES_DELETE
         ],
@@ -159,74 +157,78 @@ class PermissionsManager extends BaseManager {
             PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_CREATE,
             PermissionsManager.GRANULAR_PERMISSIONS.NOTES_CREATE,
             PermissionsManager.GRANULAR_PERMISSIONS.TRAILERS_EDIT,
-            PermissionsManager.GRANULAR_PERMISSIONS.TRAILERS_LOCATION,
             PermissionsManager.GRANULAR_PERMISSIONS.LOCATIONS_EDIT,
             PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_EDIT,
-            PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_ALERTS,
             PermissionsManager.GRANULAR_PERMISSIONS.NOTES_EDIT,
             PermissionsManager.GRANULAR_PERMISSIONS.NOTES_DELETE,
             PermissionsManager.GRANULAR_PERMISSIONS.TRAILERS_DELETE,
             PermissionsManager.GRANULAR_PERMISSIONS.LOCATIONS_DELETE,
             PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_DELETE,
-            PermissionsManager.GRANULAR_PERMISSIONS.TRAILERS_HISTORY,
             PermissionsManager.GRANULAR_PERMISSIONS.NOTES_MANAGE
         ],
         
         // Organization Management Block Inheritance
         [PermissionsManager.BLOCK_PERMISSIONS.ORG_VIEW]: [
             PermissionsManager.GRANULAR_PERMISSIONS.USERS_VIEW,
+            PermissionsManager.GRANULAR_PERMISSIONS.ROLES_VIEW,
             PermissionsManager.GRANULAR_PERMISSIONS.COMPANIES_VIEW,
             PermissionsManager.GRANULAR_PERMISSIONS.PROVIDERS_VIEW,
-            PermissionsManager.GRANULAR_PERMISSIONS.SETTINGS_VIEW
+            PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_SETTINGS_VIEW,
+            PermissionsManager.GRANULAR_PERMISSIONS.COMPANY_PREFERENCES_VIEW
         ],
         
         [PermissionsManager.BLOCK_PERMISSIONS.ORG_CREATE]: [
             PermissionsManager.GRANULAR_PERMISSIONS.USERS_CREATE,
+            PermissionsManager.GRANULAR_PERMISSIONS.ROLES_CREATE,
             PermissionsManager.GRANULAR_PERMISSIONS.COMPANIES_CREATE,
             PermissionsManager.GRANULAR_PERMISSIONS.PROVIDERS_CREATE
         ],
         
         [PermissionsManager.BLOCK_PERMISSIONS.ORG_EDIT]: [
             PermissionsManager.GRANULAR_PERMISSIONS.USERS_EDIT,
+            PermissionsManager.GRANULAR_PERMISSIONS.ROLES_EDIT,
             PermissionsManager.GRANULAR_PERMISSIONS.COMPANIES_EDIT,
             PermissionsManager.GRANULAR_PERMISSIONS.PROVIDERS_EDIT,
-            PermissionsManager.GRANULAR_PERMISSIONS.SETTINGS_EDIT,
-            PermissionsManager.GRANULAR_PERMISSIONS.SETTINGS_MAINTENANCE,
-            PermissionsManager.GRANULAR_PERMISSIONS.SETTINGS_NOTIFICATIONS
+            PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_SETTINGS_EDIT,
+            PermissionsManager.GRANULAR_PERMISSIONS.COMPANY_PREFERENCES_EDIT
         ],
         
         [PermissionsManager.BLOCK_PERMISSIONS.ORG_DELETE]: [
             PermissionsManager.GRANULAR_PERMISSIONS.USERS_DELETE,
+            PermissionsManager.GRANULAR_PERMISSIONS.ROLES_DELETE,
             PermissionsManager.GRANULAR_PERMISSIONS.COMPANIES_DELETE,
             PermissionsManager.GRANULAR_PERMISSIONS.PROVIDERS_DELETE
         ],
         
         [PermissionsManager.BLOCK_PERMISSIONS.ORG_ADMIN]: [
-            // Include the block permission itself
+            // Include all org block permissions
             PermissionsManager.BLOCK_PERMISSIONS.ORG_VIEW,
             PermissionsManager.BLOCK_PERMISSIONS.ORG_CREATE,
             PermissionsManager.BLOCK_PERMISSIONS.ORG_EDIT,
             PermissionsManager.BLOCK_PERMISSIONS.ORG_DELETE,
             // Plus all granular permissions
             PermissionsManager.GRANULAR_PERMISSIONS.USERS_VIEW,
-            PermissionsManager.GRANULAR_PERMISSIONS.COMPANIES_VIEW,
-            PermissionsManager.GRANULAR_PERMISSIONS.PROVIDERS_VIEW,
-            PermissionsManager.GRANULAR_PERMISSIONS.SETTINGS_VIEW,
             PermissionsManager.GRANULAR_PERMISSIONS.USERS_CREATE,
-            PermissionsManager.GRANULAR_PERMISSIONS.COMPANIES_CREATE,
-            PermissionsManager.GRANULAR_PERMISSIONS.PROVIDERS_CREATE,
             PermissionsManager.GRANULAR_PERMISSIONS.USERS_EDIT,
-            PermissionsManager.GRANULAR_PERMISSIONS.COMPANIES_EDIT,
-            PermissionsManager.GRANULAR_PERMISSIONS.PROVIDERS_EDIT,
-            PermissionsManager.GRANULAR_PERMISSIONS.SETTINGS_EDIT,
-            PermissionsManager.GRANULAR_PERMISSIONS.SETTINGS_MAINTENANCE,
-            PermissionsManager.GRANULAR_PERMISSIONS.SETTINGS_NOTIFICATIONS,
             PermissionsManager.GRANULAR_PERMISSIONS.USERS_DELETE,
+            PermissionsManager.GRANULAR_PERMISSIONS.COMPANIES_VIEW,
+            PermissionsManager.GRANULAR_PERMISSIONS.COMPANIES_CREATE,
+            PermissionsManager.GRANULAR_PERMISSIONS.COMPANIES_EDIT,
             PermissionsManager.GRANULAR_PERMISSIONS.COMPANIES_DELETE,
-            PermissionsManager.GRANULAR_PERMISSIONS.PROVIDERS_DELETE,
-            PermissionsManager.GRANULAR_PERMISSIONS.USERS_ROLES,
             PermissionsManager.GRANULAR_PERMISSIONS.COMPANIES_SWITCH,
-            PermissionsManager.GRANULAR_PERMISSIONS.PROVIDERS_TEST
+            PermissionsManager.GRANULAR_PERMISSIONS.PROVIDERS_VIEW,
+            PermissionsManager.GRANULAR_PERMISSIONS.PROVIDERS_CREATE,
+            PermissionsManager.GRANULAR_PERMISSIONS.PROVIDERS_EDIT,
+            PermissionsManager.GRANULAR_PERMISSIONS.PROVIDERS_DELETE,
+            PermissionsManager.GRANULAR_PERMISSIONS.PROVIDERS_TEST,
+            PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_SETTINGS_VIEW,
+            PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_SETTINGS_EDIT,
+            PermissionsManager.GRANULAR_PERMISSIONS.COMPANY_PREFERENCES_VIEW,
+            PermissionsManager.GRANULAR_PERMISSIONS.COMPANY_PREFERENCES_EDIT,
+            PermissionsManager.GRANULAR_PERMISSIONS.ROLES_VIEW,
+            PermissionsManager.GRANULAR_PERMISSIONS.ROLES_CREATE,
+            PermissionsManager.GRANULAR_PERMISSIONS.ROLES_EDIT,
+            PermissionsManager.GRANULAR_PERMISSIONS.ROLES_DELETE
         ],
         
         // Analytics & Reports Block Inheritance
@@ -235,12 +237,11 @@ class PermissionsManager extends BaseManager {
         ],
         
         [PermissionsManager.BLOCK_PERMISSIONS.ANALYTICS_EXPORT]: [
-            PermissionsManager.GRANULAR_PERMISSIONS.REPORTS_VIEW,
             PermissionsManager.GRANULAR_PERMISSIONS.REPORTS_EXPORT
         ],
         
         [PermissionsManager.BLOCK_PERMISSIONS.ANALYTICS_ADMIN]: [
-            // Include the block permission itself
+            // Include all analytics block permissions
             PermissionsManager.BLOCK_PERMISSIONS.ANALYTICS_VIEW,
             PermissionsManager.BLOCK_PERMISSIONS.ANALYTICS_EXPORT,
             // Plus all granular permissions
@@ -354,7 +355,7 @@ class PermissionsManager extends BaseManager {
         
         const template = PermissionsManager.ROLE_TEMPLATES[role.toLowerCase()];
         if (!template) {
-            console.log(`getPermissionsForRole: unknown role "${role}"`);
+            console.log(`getPermissionsForRole: unknown role "${role}" - may be custom role`);
             return [];
         }
         
@@ -362,6 +363,50 @@ class PermissionsManager extends BaseManager {
             template.blockPermissions,
             template.granularPermissions
         );
+    }
+    
+    // Get permissions for a role (including custom roles) - instance method
+    async getPermissionsForRoleAsync(roleName, tenantId = null) {
+        try {
+            if (!roleName) {
+                return [];
+            }
+            
+            const defaultTenantId = process.env.DEFAULT_TENANT_ID || 'default';
+            const actualTenantId = tenantId || defaultTenantId;
+            
+            // First check if it's a custom role
+            const customRole = await executeQueryFirst(
+                this.db,
+                'SELECT permissions_json FROM custom_roles WHERE name = ? AND tenant_id = ?',
+                [roleName, actualTenantId]
+            );
+            
+            if (customRole) {
+                // Custom role found
+                return JSON.parse(customRole.permissions_json);
+            }
+            
+            // Check for system role override
+            const overrideRole = await executeQueryFirst(
+                this.db,
+                'SELECT permissions_json FROM custom_role_permissions WHERE role_name = ? AND tenant_id = ?',
+                [roleName, actualTenantId]
+            );
+            
+            if (overrideRole) {
+                // Override found
+                return JSON.parse(overrideRole.permissions_json);
+            }
+            
+            // Use default system permissions
+            return PermissionsManager.getPermissionsForRole(roleName);
+            
+        } catch (error) {
+            console.error('Error getting permissions for role:', error);
+            // Fallback to static method
+            return PermissionsManager.getPermissionsForRole(roleName);
+        }
     }
     
     // Check if a user has a specific permission
@@ -392,6 +437,31 @@ class PermissionsManager extends BaseManager {
         }));
     }
     
+    // Role hierarchy for assignment permissions
+    static ROLE_HIERARCHY = {
+        'systemAdmin': ['systemAdmin', 'owner', 'admin', 'manager', 'user', 'viewer'],
+        'owner': ['owner', 'admin', 'manager', 'user', 'viewer'],
+        'admin': ['admin', 'manager', 'user', 'viewer'],
+        'manager': ['manager', 'user', 'viewer'],
+        'user': ['user', 'viewer'],
+        'viewer': ['viewer']
+    };
+    
+    // Get assignable roles for a given role
+    static getAssignableRoles(role) {
+        if (!role) {
+            return [];
+        }
+        
+        return PermissionsManager.ROLE_HIERARCHY[role.toLowerCase()] || [];
+    }
+    
+    // Check if a role can assign another role
+    static canAssignRole(assignerRole, targetRole) {
+        const assignableRoles = PermissionsManager.getAssignableRoles(assignerRole);
+        return assignableRoles.includes(targetRole.toLowerCase());
+    }
+    
     // Get permission groups for UI organization
     static getPermissionGroups() {
         return {
@@ -412,9 +482,7 @@ class PermissionsManager extends BaseManager {
                             PermissionsManager.GRANULAR_PERMISSIONS.TRAILERS_VIEW,
                             PermissionsManager.GRANULAR_PERMISSIONS.TRAILERS_CREATE,
                             PermissionsManager.GRANULAR_PERMISSIONS.TRAILERS_EDIT,
-                            PermissionsManager.GRANULAR_PERMISSIONS.TRAILERS_DELETE,
-                            PermissionsManager.GRANULAR_PERMISSIONS.TRAILERS_LOCATION,
-                            PermissionsManager.GRANULAR_PERMISSIONS.TRAILERS_HISTORY
+                            PermissionsManager.GRANULAR_PERMISSIONS.TRAILERS_DELETE
                         ]
                     },
                     locations: {
@@ -432,8 +500,7 @@ class PermissionsManager extends BaseManager {
                             PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_VIEW,
                             PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_CREATE,
                             PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_EDIT,
-                            PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_DELETE,
-                            PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_ALERTS
+                            PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_DELETE
                         ]
                     },
                     notes: {
@@ -465,8 +532,16 @@ class PermissionsManager extends BaseManager {
                             PermissionsManager.GRANULAR_PERMISSIONS.USERS_VIEW,
                             PermissionsManager.GRANULAR_PERMISSIONS.USERS_CREATE,
                             PermissionsManager.GRANULAR_PERMISSIONS.USERS_EDIT,
-                            PermissionsManager.GRANULAR_PERMISSIONS.USERS_DELETE,
-                            PermissionsManager.GRANULAR_PERMISSIONS.USERS_ROLES
+                            PermissionsManager.GRANULAR_PERMISSIONS.USERS_DELETE
+                        ]
+                    },
+                    roles: {
+                        name: 'Roles',
+                        permissions: [
+                            PermissionsManager.GRANULAR_PERMISSIONS.ROLES_VIEW,
+                            PermissionsManager.GRANULAR_PERMISSIONS.ROLES_CREATE,
+                            PermissionsManager.GRANULAR_PERMISSIONS.ROLES_EDIT,
+                            PermissionsManager.GRANULAR_PERMISSIONS.ROLES_DELETE
                         ]
                     },
                     companies: {
@@ -489,13 +564,18 @@ class PermissionsManager extends BaseManager {
                             PermissionsManager.GRANULAR_PERMISSIONS.PROVIDERS_TEST
                         ]
                     },
-                    settings: {
-                        name: 'Settings',
+                    maintenanceSettings: {
+                        name: 'Maintenance Settings',
                         permissions: [
-                            PermissionsManager.GRANULAR_PERMISSIONS.SETTINGS_VIEW,
-                            PermissionsManager.GRANULAR_PERMISSIONS.SETTINGS_EDIT,
-                            PermissionsManager.GRANULAR_PERMISSIONS.SETTINGS_MAINTENANCE,
-                            PermissionsManager.GRANULAR_PERMISSIONS.SETTINGS_NOTIFICATIONS
+                            PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_SETTINGS_VIEW,
+                            PermissionsManager.GRANULAR_PERMISSIONS.MAINTENANCE_SETTINGS_EDIT
+                        ]
+                    },
+                    companyPreferences: {
+                        name: 'Company Preferences',
+                        permissions: [
+                            PermissionsManager.GRANULAR_PERMISSIONS.COMPANY_PREFERENCES_VIEW,
+                            PermissionsManager.GRANULAR_PERMISSIONS.COMPANY_PREFERENCES_EDIT
                         ]
                     }
                 }
@@ -519,19 +599,7 @@ class PermissionsManager extends BaseManager {
                     }
                 }
             },
-            utilities: {
-                name: 'Utilities',
-                icon: '🔧',
-                blocks: [],
-                granular: {
-                    geocoding: {
-                        name: 'Geocoding',
-                        permissions: [
-                            PermissionsManager.GRANULAR_PERMISSIONS.GEOCODING_VIEW
-                        ]
-                    }
-                }
-            }
+
         };
     }
 
@@ -544,7 +612,7 @@ class PermissionsManager extends BaseManager {
         try {
             const user = await executeQueryFirst(
                 this.db,
-                'SELECT organization_role as organizationRole, custom_permissions as customPermissions FROM users WHERE id = ?',
+                'SELECT organization_role as organizationRole, custom_permissions as customPermissions, tenant_id as tenantId FROM users WHERE id = ?',
                 [userId]
             );
             
@@ -552,8 +620,8 @@ class PermissionsManager extends BaseManager {
                 return [];
             }
             
-            // Get base permissions from role template
-            const basePermissions = PermissionsManager.getPermissionsForRole(user.organizationRole);
+            // Get base permissions from role (including custom roles)
+            const basePermissions = await this.getPermissionsForRoleAsync(user.organizationRole, user.tenantId);
             
             // If user has custom permissions, merge them
             if (user.customPermissions) {
@@ -563,7 +631,7 @@ class PermissionsManager extends BaseManager {
                         customPermissions.blockPermissions || [],
                         customPermissions.granularPermissions || []
                     );
-        } catch (error) {
+                } catch (error) {
                     console.error('Error parsing custom permissions:', error);
                     return basePermissions;
                 }
@@ -597,9 +665,81 @@ class PermissionsManager extends BaseManager {
         }
     }
     
-    // Get all available roles (instance method)
+    // Get all available roles (instance method) - includes custom roles
     async getAllRoles(tenantId = null) {
-        return PermissionsManager.getAllRoles();
+        try {
+            const defaultTenantId = process.env.DEFAULT_TENANT_ID || 'default';
+            const actualTenantId = tenantId || defaultTenantId;
+            
+            // Get system roles
+            const systemRoles = Object.keys(PermissionsManager.ROLE_TEMPLATES).map(role => ({
+                name: role,
+                displayName: PermissionsManager.ROLE_TEMPLATES[role].name,
+                description: PermissionsManager.ROLE_TEMPLATES[role].description,
+                isCustom: false,
+                permissions: PermissionsManager.getPermissionsForRole(role)
+            }));
+            
+            // Get custom roles from database
+            const customRoles = await executeQuery(
+                this.db,
+                `SELECT name, display_name, description, permissions_json, created_at, updated_at
+                 FROM custom_roles 
+                 WHERE tenant_id = ?
+                 ORDER BY created_at ASC`,
+                [actualTenantId]
+            );
+            
+            const processedCustomRoles = customRoles.map(row => ({
+                name: row.name,
+                displayName: row.display_name,
+                description: row.description,
+                isCustom: true,
+                permissions: JSON.parse(row.permissions_json),
+                createdAt: row.created_at,
+                updatedAt: row.updated_at
+            }));
+            
+            // Get system role overrides from custom_role_permissions
+            const systemRoleOverrides = await executeQuery(
+                this.db,
+                `SELECT role_name, permissions_json
+                 FROM custom_role_permissions 
+                 WHERE tenant_id = ?`,
+                [actualTenantId]
+            );
+            
+            // Apply overrides to system roles
+            const overrideMap = new Map();
+            systemRoleOverrides.forEach(row => {
+                overrideMap.set(row.role_name, JSON.parse(row.permissions_json));
+            });
+            
+            const systemRolesWithOverrides = systemRoles.map(role => {
+                if (overrideMap.has(role.name)) {
+                    return {
+                        ...role,
+                        permissions: overrideMap.get(role.name),
+                        hasOverride: true
+                    };
+                }
+                return role;
+            });
+            
+            // Combine system and custom roles
+            return [...systemRolesWithOverrides, ...processedCustomRoles];
+            
+        } catch (error) {
+            console.error('Error getting all roles:', error);
+            // Fallback to system roles only
+            return Object.keys(PermissionsManager.ROLE_TEMPLATES).map(role => ({
+                name: role,
+                displayName: PermissionsManager.ROLE_TEMPLATES[role].name,
+                description: PermissionsManager.ROLE_TEMPLATES[role].description,
+                isCustom: false,
+                permissions: PermissionsManager.getPermissionsForRole(role)
+            }));
+        }
     }
     
     // Get all roles with their permissions
@@ -623,6 +763,136 @@ class PermissionsManager extends BaseManager {
         } catch (error) {
             console.error('Error getting roles with permissions:', error);
             return {};
+        }
+    }
+    
+    // Create custom role
+    async createCustomRole(name, displayName, description, permissions, tenantId = null) {
+        try {
+            if (!name || !displayName || !permissions) {
+                throw new Error('Role name, display name, and permissions are required');
+            }
+            
+            if (!Array.isArray(permissions)) {
+                throw new Error('Permissions must be an array');
+            }
+            
+            const defaultTenantId = process.env.DEFAULT_TENANT_ID || 'default';
+            const actualTenantId = tenantId || defaultTenantId;
+            
+            const roleId = generateId('role');
+            const timestamp = getCurrentTimestamp();
+
+            const result = await executeSingleQuery(this.db, `
+                INSERT INTO custom_roles (
+                    id, name, display_name, description, permissions_json, tenant_id, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            `, [roleId, name, displayName, description, JSON.stringify(permissions), actualTenantId, timestamp]);
+            
+            return { id: roleId, changes: result.changes };
+        } catch (error) {
+            console.error('Error creating custom role:', error);
+            throw new Error('Failed to create custom role');
+        }
+    }
+    
+    // Update custom role
+    async updateCustomRole(roleName, updates, tenantId = null) {
+        try {
+            if (!roleName) {
+                throw new Error('Role name is required');
+            }
+            
+            const defaultTenantId = process.env.DEFAULT_TENANT_ID || 'default';
+            const actualTenantId = tenantId || defaultTenantId;
+            
+            const { displayName, description, permissions } = updates;
+            
+            if (permissions && !Array.isArray(permissions)) {
+                throw new Error('Permissions must be an array');
+            }
+            
+            let query = `UPDATE custom_roles SET `;
+            let params = [];
+            let setClauses = [];
+            
+            if (displayName !== undefined) {
+                setClauses.push('display_name = ?');
+                params.push(displayName);
+            }
+            if (description !== undefined) {
+                setClauses.push('description = ?');
+                params.push(description);
+            }
+            if (permissions !== undefined) {
+                setClauses.push('permissions_json = ?');
+                params.push(JSON.stringify(permissions));
+            }
+            
+            if (setClauses.length === 0) {
+                throw new Error('No valid updates provided');
+            }
+            
+            setClauses.push('updated_at = ?');
+            params.push(getCurrentTimestamp());
+            
+            query += setClauses.join(', ');
+            query += ` WHERE name = ? AND tenant_id = ?`;
+            params.push(roleName, actualTenantId);
+            
+            const result = await executeSingleQuery(this.db, query, params);
+            return { changes: result.changes };
+        } catch (error) {
+            console.error('Error updating custom role:', error);
+            throw new Error('Failed to update custom role');
+        }
+    }
+    
+    // Delete custom role
+    async deleteCustomRole(roleName, tenantId = null) {
+        try {
+            if (!roleName) {
+                throw new Error('Role name is required');
+            }
+            
+            const defaultTenantId = process.env.DEFAULT_TENANT_ID || 'default';
+            const actualTenantId = tenantId || defaultTenantId;
+            
+            const result = await executeSingleQuery(this.db, `
+                DELETE FROM custom_roles WHERE name = ? AND tenant_id = ?
+            `, [roleName, actualTenantId]);
+            
+            return { changes: result.changes };
+        } catch (error) {
+            console.error('Error deleting custom role:', error);
+            throw new Error('Failed to delete custom role');
+        }
+    }
+    
+    // Check if role exists (system or custom)
+    async roleExists(roleName, tenantId = null) {
+        try {
+            if (!roleName) {
+                throw new Error('Role name is required');
+            }
+            
+            // Check system roles first
+            if (PermissionsManager.ROLE_TEMPLATES[roleName]) {
+                return true;
+            }
+            
+            // Check custom roles
+            const defaultTenantId = process.env.DEFAULT_TENANT_ID || 'default';
+            const actualTenantId = tenantId || defaultTenantId;
+            
+            const role = await executeQueryFirst(this.db, `
+                SELECT COUNT(*) as count FROM custom_roles WHERE name = ? AND tenant_id = ?
+            `, [roleName, actualTenantId]);
+            
+            return role.count > 0;
+        } catch (error) {
+            console.error('Error checking if role exists:', error);
+            throw new Error('Failed to check role existence');
         }
     }
 }

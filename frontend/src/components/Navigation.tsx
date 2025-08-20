@@ -98,13 +98,13 @@ const Navigation = () => {
       label: 'Users',
       href: '/users',
       icon: Users,
-      requiredPermission: 'users_view',
+      requiredPermissions: ['users_view', 'roles_view'], // Show if ANY tab is accessible
     },
     {
       label: 'Company',
       href: '/settings',
       icon: Building,
-      requiredPermission: 'companies_view',
+      requiredPermissions: ['companies_view', 'providers_view', 'maintenance_settings_view', 'company_preferences_view'], // Show if ANY tab is accessible
     },
   ];
 
@@ -113,11 +113,11 @@ const Navigation = () => {
     if (!permission) return true; // No permission required
     if (!user?.organizationRole) return false;
     
-    // Define permission hierarchy
+    // Define permission hierarchy for navigation
     const rolePermissions: Record<string, string[]> = {
-      'superadmin': ['users_view', 'companies_view', 'providers_view', 'settings_view', 'settings_edit'],
-      'owner': ['users_view', 'companies_view', 'providers_view', 'settings_view', 'settings_edit'],
-      'admin': ['users_view', 'companies_view', 'providers_view', 'settings_view', 'settings_edit'],
+      'superadmin': ['users_view', 'companies_view', 'providers_view', 'roles_view', 'maintenance_settings_view', 'company_preferences_view'],
+      'owner': ['users_view', 'companies_view', 'providers_view', 'roles_view', 'maintenance_settings_view', 'company_preferences_view'],
+      'admin': ['users_view', 'companies_view', 'providers_view', 'roles_view', 'maintenance_settings_view', 'company_preferences_view'],
       'manager': ['companies_view', 'providers_view'], // Managers can't manage users
       'user': [], // Regular users have no admin permissions
     };
@@ -125,8 +125,12 @@ const Navigation = () => {
     return rolePermissions[user.organizationRole]?.includes(permission) || false;
   };
 
+  const hasAnyPermission = (permissions: string[]) => {
+    return permissions.some(permission => hasPermission(permission));
+  };
+
   const visibleNavItems = navItems.filter(item => hasPermission(item.requiredPermission));
-  const visibleSettingsItems = settingsItems.filter(item => hasPermission(item.requiredPermission));
+  const visibleSettingsItems = settingsItems.filter(item => hasAnyPermission(item.requiredPermissions));
 
   // Admin dashboard is hidden from all users - only accessible via special login
   // No admin link shown in navigation

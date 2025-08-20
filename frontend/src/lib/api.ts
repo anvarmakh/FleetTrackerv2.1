@@ -230,13 +230,14 @@ export const userAPI = {
   deactivateUser: (userId: string) => api.patch(`/api/users/${userId}/deactivate`),
   activateUser: (userId: string) => api.patch(`/api/users/${userId}/activate`),
   getPermissions: () => api.get('/api/users/permissions'),
+  getPermissionStructure: () => api.get('/api/users/permission-structure'),
+  getUserPermissions: (userId: string) => api.get(`/api/users/${userId}/permissions`),
+  updateUserPermissions: (userId: string, permissions: { blockPermissions: string[], granularPermissions: string[] }) => 
+    api.put(`/api/users/${userId}/permissions`, permissions),
   getRoles: () => api.get('/api/users/roles'),
-  updateRolePermissions: (roleName: string, permissions: string[]) => api.put(`/api/users/roles/${roleName}`, { permissions }),
-  updateRole: (roleName: string, roleData: any) => api.put(`/api/users/roles/${roleName}`, roleData),
-  createRole: (roleData: any) => api.post('/api/users/roles', roleData),
+  createRole: (roleData: { displayName: string; description?: string; permissions: string[] }) => api.post('/api/users/roles', roleData),
+  updateRole: (roleName: string, roleData: { displayName?: string; description?: string; permissions?: string[] }) => api.put(`/api/users/roles/${roleName}`, roleData),
   deleteRole: (roleName: string) => api.delete(`/api/users/roles/${roleName}`),
-  createCustomRole: (roleData: { name: string; displayName: string; description?: string; permissions: string[] }) => api.post('/api/users/roles', roleData),
-  deleteCustomRole: (roleName: string) => api.delete(`/api/users/roles/${roleName}`),
 };
 
 export const companyAPI = {

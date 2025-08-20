@@ -19,11 +19,11 @@ const requirePermission = (requiredPermission) => {
                 });
             }
 
-            // Get user's effective permissions
-            const userPermissions = await permissionsManager.getUserPermissions(user.id);
+            // Get user's effective permissions using the same method as frontend
+            const userPermissions = PermissionsManager.getPermissionsForRole(user.organizationRole);
             
             // Check if user has the required permission
-            const hasPermission = PermissionsManager.hasPermission(userPermissions, requiredPermission);
+            const hasPermission = userPermissions.includes(requiredPermission);
             
             if (!hasPermission) {
                 logger.warn(`Permission denied: User ${user.id} (${user.email}) attempted to access ${req.method} ${req.originalUrl} without permission: ${requiredPermission}`);
@@ -65,11 +65,11 @@ const requireAnyPermission = (requiredPermissions) => {
                 });
             }
 
-            const userPermissions = await permissionsManager.getUserPermissions(user.id);
+            const userPermissions = PermissionsManager.getPermissionsForRole(user.organizationRole);
             
             // Check if user has any of the required permissions
             const hasAnyPermission = requiredPermissions.some(permission => 
-                PermissionsManager.hasPermission(userPermissions, permission)
+                userPermissions.includes(permission)
             );
             
             if (!hasAnyPermission) {
@@ -110,16 +110,16 @@ const requireAllPermissions = (requiredPermissions) => {
                 });
             }
 
-            const userPermissions = await permissionsManager.getUserPermissions(user.id);
+            const userPermissions = PermissionsManager.getPermissionsForRole(user.organizationRole);
             
             // Check if user has all of the required permissions
             const hasAllPermissions = requiredPermissions.every(permission => 
-                PermissionsManager.hasPermission(userPermissions, permission)
+                userPermissions.includes(permission)
             );
             
             if (!hasAllPermissions) {
                 const missingPermissions = requiredPermissions.filter(permission => 
-                    !PermissionsManager.hasPermission(userPermissions, permission)
+                    !userPermissions.includes(permission)
                 );
                 
                 logger.warn(`Permission denied: User ${user.id} (${user.email}) attempted to access ${req.method} ${req.originalUrl} missing permissions: ${missingPermissions.join(', ')}`);
@@ -159,9 +159,9 @@ const checkPermission = (permission) => {
                 return next();
             }
 
-            const userPermissions = await permissionsManager.getUserPermissions(user.id);
+            const userPermissions = PermissionsManager.getPermissionsForRole(user.organizationRole);
             
-            req.hasPermission = PermissionsManager.hasPermission(userPermissions, permission);
+            req.hasPermission = userPermissions.includes(permission);
             req.userPermissions = userPermissions;
             
             next();
@@ -208,17 +208,24 @@ const requireSuperAdmin = async (req, res, next) => {
 };
 
 /**
- * Utility function to check if user has permission (for use in route handlers)
- */
-const hasPermission = (userPermissions, permission) => {
-    return PermissionsManager.hasPermission(userPermissions, permission);
-};
-
-/**
  * Utility function to get user's effective permissions (for use in route handlers)
  */
 const getUserEffectivePermissions = async (userId) => {
     return await permissionsManager.getUserPermissions(userId);
+};
+
+/**
+ * Helper function to get user permissions for frontend
+ */
+const getUserPermissions = (userRole) => {
+    return PermissionsManager.getPermissionsForRole(userRole);
+};
+
+/**
+ * Helper function to get assignable roles for frontend
+ */
+const getAssignableRoles = (userRole) => {
+    return PermissionsManager.getAssignableRoles(userRole);
 };
 
 module.exports = {
@@ -227,6 +234,7 @@ module.exports = {
     requireAllPermissions,
     checkPermission,
     requireSuperAdmin,
-    hasPermission,
-    getUserEffectivePermissions
+    getUserEffectivePermissions,
+    getUserPermissions,
+    getAssignableRoles
 }; 

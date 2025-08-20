@@ -184,7 +184,7 @@ const Trailers = () => {
         setMaintenancePreferences(response.data.data);
       }
     } catch (error) {
-      // Handle 403 errors gracefully for users without settings_view permission
+              // Handle 403 errors gracefully for users without maintenance_settings_view permission
       if (error.response?.status === 403) {
         console.log('User does not have permission to view maintenance preferences, using defaults');
       } else {

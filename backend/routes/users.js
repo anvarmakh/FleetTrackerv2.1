@@ -149,7 +149,7 @@ router.get('/permissions', authenticateToken, asyncHandler(async (req, res) => {
   const userRole = req.user.organizationRole;
   const userPermissions = getUserPermissions(userRole);
   const assignableRoles = getAssignableRoles(userRole);
-  const availableRoles = PermissionsManager.getAvailableRoles();
+  const availableRoles = PermissionsManager.getAllRoles();
   
   res.json({
     success: true,
@@ -162,8 +162,134 @@ router.get('/permissions', authenticateToken, asyncHandler(async (req, res) => {
   });
 }));
 
+// Get permission structure for organization role management (owners, admins, managers)
+router.get('/permission-structure', authenticateToken, requirePermission('users_view'), asyncHandler(async (req, res) => {
+  try {
+    const permissionGroups = PermissionsManager.getPermissionGroups();
+    const roleTemplates = PermissionsManager.ROLE_TEMPLATES;
+    const blockPermissions = PermissionsManager.BLOCK_PERMISSIONS;
+    const granularPermissions = PermissionsManager.GRANULAR_PERMISSIONS;
+    
+    res.json({
+      success: true,
+      data: {
+        permissionStructure: permissionGroups,
+        roleTemplates,
+        blockPermissions,
+        granularPermissions
+      }
+    });
+  } catch (error) {
+    console.error('Error getting permission structure:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get permission structure'
+    });
+  }
+}));
+
+// Get user permissions by user ID (for organization role management)
+router.get('/:userId/permissions', authenticateToken, requirePermission('users_view'), asyncHandler(async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Check if target user exists and is in same tenant
+    const targetUser = await userManager.getUserById(userId);
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    if (targetUser.tenantId !== req.user.tenantId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Cannot access user from different tenant'
+      });
+    }
+    
+    // Check if user has permission to view this user's permissions
+    if (!PermissionsManager.canAssignRole(req.user.organizationRole, targetUser.organizationRole)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Cannot view permissions for user with this role'
+      });
+    }
+    
+    const userPermissions = await permissionsManager.getUserPermissions(userId);
+    
+    res.json({
+      success: true,
+      data: {
+        userId,
+        permissions: userPermissions
+      }
+    });
+  } catch (error) {
+    console.error('Error getting user permissions:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get user permissions'
+    });
+  }
+}));
+
+// Update user permissions (for organization role management)
+router.put('/:userId/permissions', authenticateToken, requirePermission('users_edit'), asyncHandler(async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { blockPermissions = [], granularPermissions = [] } = req.body;
+    
+    // Check if target user exists and is in same tenant
+    const targetUser = await userManager.getUserById(userId);
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    if (targetUser.tenantId !== req.user.tenantId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Cannot modify user from different tenant'
+      });
+    }
+    
+    // Check if user has permission to modify this user's permissions
+    if (!PermissionsManager.canAssignRole(req.user.organizationRole, targetUser.organizationRole)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Cannot modify permissions for user with this role'
+      });
+    }
+    
+    const success = await permissionsManager.updateUserPermissions(userId, blockPermissions, granularPermissions);
+    
+    if (success) {
+      res.json({
+        success: true,
+        message: 'User permissions updated successfully'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update user permissions'
+      });
+    }
+  } catch (error) {
+    console.error('Error updating user permissions:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update user permissions'
+    });
+  }
+}));
+
+
 // Get all roles for the tenant
-router.get('/roles', authenticateToken, requirePermission('users_view'), asyncHandler(async (req, res) => {
+router.get('/roles', authenticateToken, requirePermission('roles_view'), asyncHandler(async (req, res) => {
   try {
     const allRoles = await getCachedRoles(req.user.tenantId);
     
@@ -617,7 +743,7 @@ router.patch('/:id/activate', authenticateToken, requirePermission('users_edit')
 }));
 
 // Update role permissions
-router.put('/roles/:roleName', authenticateToken, requirePermission('users_edit'), asyncHandler(async (req, res) => {
+router.put('/roles/:roleName', authenticateToken, requirePermission('roles_edit'), asyncHandler(async (req, res) => {
   try {
     const { roleName } = req.params;
     const { permissions } = req.body;
@@ -663,7 +789,7 @@ router.put('/roles/:roleName', authenticateToken, requirePermission('users_edit'
 }));
 
 // Create a new role
-router.post('/roles', authenticateToken, requirePermission('users_create'), asyncHandler(async (req, res) => {
+router.post('/roles', authenticateToken, requirePermission('roles_create'), asyncHandler(async (req, res) => {
   try {
     const { name, displayName, description, permissions } = req.body;
 
@@ -701,7 +827,7 @@ router.post('/roles', authenticateToken, requirePermission('users_create'), asyn
 }));
 
 // Delete a role
-router.delete('/roles/:roleName', authenticateToken, requirePermission('users_delete'), asyncHandler(async (req, res) => {
+router.delete('/roles/:roleName', authenticateToken, requirePermission('roles_delete'), asyncHandler(async (req, res) => {
   try {
     const { roleName } = req.params;
 
@@ -730,6 +856,8 @@ router.delete('/roles/:roleName', authenticateToken, requirePermission('users_de
     });
   }
 }));
+
+
 
 // Change user password
 router.put('/:id/password', authenticateToken, asyncHandler(async (req, res) => {
@@ -763,8 +891,9 @@ router.put('/:id/password', authenticateToken, asyncHandler(async (req, res) => 
     }
 
     // Check if user is changing their own password or has permission
-    // Only allow self-change, or if caller has users_edit permission via role check
-    const canEditUsers = PermissionsManager.hasPermission(req.user.organizationRole, 'users_edit');
+    // Only allow self-change, or if caller has users_edit permission
+    const userPermissions = await permissionsManager.getUserPermissions(req.user.id);
+    const canEditUsers = PermissionsManager.hasPermission(userPermissions, 'users_edit');
     if (user.id !== req.user.id && !canEditUsers) {
       return res.status(403).json({
         success: false,
@@ -821,7 +950,7 @@ function getPermissionCategories() {
     },
     companyManagement: {
       title: 'Company Management',
-      permissions: ['companies_view', 'companies_create', 'companies_edit', 'companies_delete', 'cross_company_access']
+              permissions: ['companies_view', 'companies_create', 'companies_edit', 'companies_delete', 'companies_switch']
     },
     trailerManagement: {
       title: 'Trailer Management',

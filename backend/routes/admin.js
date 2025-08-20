@@ -39,13 +39,13 @@ const requireSuperAdmin = (req, res, next) => {
         });
     }
     
-    // Check for SuperAdmin role - use organizationRole as that's what's set in user context
-    if (!req.user.organizationRole || req.user.organizationRole !== USER_ROLES.SUPER_ADMIN) {
+    // Check for SystemAdmin role - use organizationRole as that's what's set in user context
+    if (!req.user.organizationRole || req.user.organizationRole !== USER_ROLES.SYSTEM_ADMIN) {
         // Log unauthorized access attempt
-        console.warn(`🚨 Unauthorized admin access attempt by user ${req.user.email} (${req.user.id}) from IP ${req.ip}`);
+        console.warn(`🚨 Unauthorized system admin access attempt by user ${req.user.email} (${req.user.id}) from IP ${req.ip}`);
         return res.status(403).json({
             success: false,
-            error: 'SuperAdmin access required - this is a system management area'
+            error: 'SystemAdmin access required - this is a system management area'
         });
     }
     
