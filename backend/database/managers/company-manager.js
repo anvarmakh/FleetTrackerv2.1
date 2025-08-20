@@ -321,29 +321,59 @@ class CompanyManager extends BaseManager {
     /**
      * Verify company ownership
      */
-    async verifyCompanyOwnership(companyId, userId, tenantId = null) {
+    async verifyCompanyOwnership(companyId, userId, tenantId = null, userRole = null) {
         try {
             if (!companyId || !userId) {
                 return null;
             }
 
+            // Check if user has elevated permissions (owner/admin can access any company in tenant)
+            let hasElevatedAccess = false;
+            if (userRole && userRole.trim()) {
+                hasElevatedAccess = ['owner', 'admin'].includes(userRole.toLowerCase());
+            }
+
             let query, params;
             if (tenantId && tenantId.trim()) {
-                query = `
-                    SELECT c.id, c.name, c.tenant_id, u.tenant_id as user_tenant
-                    FROM companies c
-                    JOIN users u ON c.user_id = u.id
-                    WHERE c.id = ? AND c.user_id = ? AND c.is_active = 1
-                    AND c.tenant_id = ? AND u.tenant_id = ?
-                `;
-                params = [companyId, userId, tenantId, tenantId];
+                if (hasElevatedAccess) {
+                    // Owner/Admin can access any company in their tenant
+                    query = `
+                        SELECT c.id, c.name, c.tenant_id, u.tenant_id as user_tenant
+                        FROM companies c
+                        JOIN users u ON u.id = ?
+                        WHERE c.id = ? AND c.is_active = 1
+                        AND c.tenant_id = ? AND u.tenant_id = ?
+                    `;
+                    params = [userId, companyId, tenantId, tenantId];
+                } else {
+                    // Regular users can only access companies they own
+                    query = `
+                        SELECT c.id, c.name, c.tenant_id, u.tenant_id as user_tenant
+                        FROM companies c
+                        JOIN users u ON c.user_id = u.id
+                        WHERE c.id = ? AND c.user_id = ? AND c.is_active = 1
+                        AND c.tenant_id = ? AND u.tenant_id = ?
+                    `;
+                    params = [companyId, userId, tenantId, tenantId];
+                }
             } else {
-                query = `
-                    SELECT c.id, c.name, c.tenant_id
-                    FROM companies c
-                    WHERE c.id = ? AND c.user_id = ? AND c.is_active = 1
-                `;
-                params = [companyId, userId];
+                if (hasElevatedAccess) {
+                    // Owner/Admin can access any company
+                    query = `
+                        SELECT c.id, c.name, c.tenant_id
+                        FROM companies c
+                        WHERE c.id = ? AND c.is_active = 1
+                    `;
+                    params = [companyId];
+                } else {
+                    // Regular users can only access companies they own
+                    query = `
+                        SELECT c.id, c.name, c.tenant_id
+                        FROM companies c
+                        WHERE c.id = ? AND c.user_id = ? AND c.is_active = 1
+                    `;
+                    params = [companyId, userId];
+                }
             }
 
             return await executeQueryFirst(this.db, query, params);

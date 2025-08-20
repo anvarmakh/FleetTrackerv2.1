@@ -518,19 +518,8 @@ const Users = () => {
 
             <TabsContent value="roles">
               <RoleManagement
-                roles={roles}
                 users={users}
-                selectedRole={selectedRole}
-                editingRole={editingRole}
-                permissionCategories={permissionCategories}
-                onRoleSelect={handleRoleSelect}
-                onEditRole={handleEditRole}
-                onDeleteCustomRole={handleDeleteCustomRole}
-                onSaveRolePermissions={handleSaveRolePermissions}
-                onCancelEdit={() => setEditingRole(null)}
-                onCategoryToggle={handleCategoryToggle}
-                onPermissionToggle={handlePermissionToggle}
-                onCreateRole={() => setShowCreateRoleDialog(true)}
+                onUserUpdate={loadUsersData}
               />
             </TabsContent>
           </Tabs>

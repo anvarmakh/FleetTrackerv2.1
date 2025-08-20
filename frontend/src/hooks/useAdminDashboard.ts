@@ -2,7 +2,7 @@
 // ADMIN DASHBOARD HOOK
 // ============================================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/lib/api';
@@ -73,6 +73,7 @@ export function useAdminDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const hasLoadedRef = useRef(false);
 
   const handleSignOut = useCallback(() => {
     logout();
@@ -86,7 +87,8 @@ export function useAdminDashboard() {
       // Check if admin token exists and is valid
       const authToken = localStorage.getItem('authToken');
       if (!authToken) {
-        handleSignOut();
+        logout();
+        navigate('/login');
         return;
       }
       
@@ -121,20 +123,19 @@ export function useAdminDashboard() {
       }
 
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast({
-        title: "Error",
-        description: "Failed to load admin dashboard data",
-        variant: "destructive",
-      });
+      console.error('Failed to load admin dashboard data:', error);
     } finally {
       setLoading(false);
     }
-  }, [handleSignOut, toast]);
+  }, [logout, navigate]);
 
   useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
+    // Only load data once when component mounts
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      loadDashboardData();
+    }
+  }, []); // Empty dependency array - only run once
 
   const handleCreateTenant = async () => {
     try {

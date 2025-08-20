@@ -52,7 +52,7 @@ router.get('/', authenticateToken, validateTenant, requirePermission('providers_
 }));
 
 // Get all GPS providers for a company
-router.get('/:companyId', authenticateToken, validateTenant, asyncHandler(async (req, res) => {
+router.get('/:companyId', authenticateToken, validateTenant, requirePermission('org_view'), asyncHandler(async (req, res) => {
     try {
         const { companyId } = req.params;
         
@@ -182,7 +182,7 @@ router.post('/:companyId', authenticateToken, validateTenant, requirePermission(
 }));
 
 // Update a GPS provider
-router.put('/:id', authenticateToken, validateTenant, asyncHandler(async (req, res) => {
+router.put('/:id', authenticateToken, validateTenant, requirePermission('org_edit'), asyncHandler(async (req, res) => {
     try {
         const { id } = req.params;
         const { name, type, credentials } = req.body;
@@ -241,7 +241,7 @@ router.put('/:id', authenticateToken, validateTenant, asyncHandler(async (req, r
 }));
 
 // Delete a GPS provider
-router.delete('/:id', authenticateToken, validateTenant, asyncHandler(async (req, res) => {
+router.delete('/:id', authenticateToken, validateTenant, requirePermission('org_delete'), asyncHandler(async (req, res) => {
     try {
         const { id } = req.params;
         const { deleteRelatedTrailers = false } = req.query;
@@ -265,7 +265,7 @@ router.delete('/:id', authenticateToken, validateTenant, asyncHandler(async (req
 }));
 
 // Test GPS provider connection
-router.post('/:id/test', authenticateToken, validateTenant, asyncHandler(async (req, res) => {
+router.post('/:id/test', authenticateToken, validateTenant, requirePermission('org_edit'), asyncHandler(async (req, res) => {
     try {
         const { id } = req.params;
         

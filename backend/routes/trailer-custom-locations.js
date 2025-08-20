@@ -1,11 +1,12 @@
 const express = require('express');
 const { authenticateToken, validateTenant } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 const { trailerCustomLocationManager, companyManager, trailerCustomCompanyManager } = require('../database/database-manager');
 
 const router = express.Router();
 
 // Get all custom locations for the authenticated user
-router.get('/', authenticateToken, validateTenant, async (req, res) => {
+router.get('/', authenticateToken, validateTenant, requirePermission('fleet_view'), async (req, res) => {
     try {
         // Get user's active company
         let activeCompany = await companyManager.getActiveCompany(req.user.id, req.user.tenantId);
@@ -44,7 +45,7 @@ router.get('/', authenticateToken, validateTenant, async (req, res) => {
 });
 
 // Create a new custom location
-router.post('/', authenticateToken, validateTenant, async (req, res) => {
+router.post('/', authenticateToken, validateTenant, requirePermission('fleet_create'), async (req, res) => {
     try {
         // Get user's active company
         let activeCompany = await companyManager.getActiveCompany(req.user.id, req.user.tenantId);
@@ -86,7 +87,7 @@ router.post('/', authenticateToken, validateTenant, async (req, res) => {
 });
 
 // Update a custom location
-router.put('/:id', authenticateToken, validateTenant, async (req, res) => {
+router.put('/:id', authenticateToken, validateTenant, requirePermission('fleet_edit'), async (req, res) => {
     try {
         const { id } = req.params;
         
@@ -141,7 +142,7 @@ router.put('/:id', authenticateToken, validateTenant, async (req, res) => {
 });
 
 // Delete a custom location
-router.delete('/:id', authenticateToken, validateTenant, async (req, res) => {
+router.delete('/:id', authenticateToken, validateTenant, requirePermission('fleet_delete'), async (req, res) => {
     try {
         const { id } = req.params;
         

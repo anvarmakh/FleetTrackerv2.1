@@ -1,5 +1,6 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 const { 
     trailerManager, 
     companyManager, 
@@ -54,7 +55,7 @@ async function createTrailerHandler(req, res) {
             }
         } else {
             // It's a regular company
-            targetCompany = await companyManager.verifyCompanyOwnership(trailerData.companyId, req.user.id, user.tenantId);
+            targetCompany = await companyManager.verifyCompanyOwnership(trailerData.companyId, req.user.id, user.tenantId, req.user.organizationRole);
             if (!targetCompany) {
                 return res.status(403).json({ 
                     success: false, 
@@ -125,15 +126,8 @@ async function createTrailerHandler(req, res) {
     }
 }
 
-
-
 // Create a new trailer
-router.post('/create', createTrailerHandler);
-
-
-
-// Create a new trailer (original route for backward compatibility)
-router.post('/', createTrailerHandler);
+router.post('/create', requirePermission('fleet_create'), createTrailerHandler);
 
 // Debug endpoint to check trailers by company ID
 router.get('/debug/by-company/:companyId', async (req, res) => {
@@ -261,7 +255,7 @@ router.get('/debug/current-company', authenticateToken, async (req, res) => {
 });
 
 // Get all trailers for the authenticated user
-router.get('/', asyncHandler(async (req, res) => {
+router.get('/', requirePermission('fleet_view'), asyncHandler(async (req, res) => {
     try {
         // Wrap the entire logic in a try-catch to catch any errors
         try {
@@ -394,7 +388,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
 
 // Get a specific trailer by ID
-router.get('/:trailerId', async (req, res) => {
+router.get('/:trailerId', requirePermission('fleet_view'), async (req, res) => {
     try {
         const { trailerId } = req.params;
         
@@ -456,7 +450,7 @@ router.get('/:trailerId', async (req, res) => {
 });
 
 // Update a trailer
-router.put('/:trailerId', async (req, res) => {
+router.put('/:trailerId', requirePermission('fleet_edit'), async (req, res) => {
     try {
         const { trailerId } = req.params;
         const updateData = req.body;
@@ -505,7 +499,7 @@ router.put('/:trailerId', async (req, res) => {
                 });
             }
         } else {
-            const company = await companyManager.verifyCompanyOwnership(existingTrailer.companyId, req.user.id, user.tenantId);
+            const company = await companyManager.verifyCompanyOwnership(existingTrailer.companyId, req.user.id, user.tenantId, req.user.organizationRole);
             if (!company) {
                 return res.status(403).json({ 
                     success: false, 
@@ -599,7 +593,7 @@ router.put('/:trailerId', async (req, res) => {
 });
 
 // Delete a trailer
-router.delete('/:trailerId', async (req, res) => {
+router.delete('/:trailerId', requirePermission('fleet_delete'), async (req, res) => {
     try {
         const { trailerId } = req.params;
         
@@ -640,7 +634,7 @@ router.delete('/:trailerId', async (req, res) => {
                 });
             }
         } else {
-            const company = await companyManager.verifyCompanyOwnership(existingTrailer.companyId, req.user.id, user.tenantId);
+            const company = await companyManager.verifyCompanyOwnership(existingTrailer.companyId, req.user.id, user.tenantId, req.user.organizationRole);
             if (!company) {
                 return res.status(403).json({ 
                     success: false, 
@@ -672,7 +666,7 @@ router.delete('/:trailerId', async (req, res) => {
 });
 
 // Get trailer location history
-router.get('/:trailerId/location-history', async (req, res) => {
+router.get('/:trailerId/location-history', requirePermission('fleet_view'), async (req, res) => {
     try {
         const { trailerId } = req.params;
         
@@ -740,7 +734,7 @@ router.get('/:trailerId/location-history', async (req, res) => {
 });
 
 // Update trailer location
-router.put('/:trailerId/location', async (req, res) => {
+router.put('/:trailerId/location', requirePermission('fleet_edit'), async (req, res) => {
     try {
         const { trailerId } = req.params;
         const locationData = req.body;

@@ -299,12 +299,12 @@ export const trailerCustomLocationAPI = {
 };
 
 export const systemNotesAPI = {
-  getNotes: (filters?: NoteFilters) => api.get<NoteData[]>('/api/notes', { params: filters }),
-  getTrailerNotes: (trailerId: string) => api.get<NoteData[]>(`/api/notes/trailer/${trailerId}`),
-  createNote: (data: Omit<NoteData, 'id' | 'createdAt' | 'updatedAt'>) => api.post<NoteData>('/api/notes', data),
-  createTrailerNote: (trailerId: string, data: Omit<NoteData, 'id' | 'createdAt' | 'updatedAt'>) => api.post<NoteData>(`/api/notes/trailer/${trailerId}`, data),
+  getNotes: (entityType: string, entityId: string) => api.get<NoteData[]>(`/api/notes/${entityType}/${entityId}`),
+  createNote: (entityType: string, entityId: string, data: Omit<NoteData, 'id' | 'createdAt' | 'updatedAt'>) => api.post<NoteData>(`/api/notes/${entityType}/${entityId}`, data),
   updateNote: (id: string, data: Partial<NoteData>) => api.put<NoteData>(`/api/notes/${id}`, data),
   deleteNote: (id: string) => api.delete(`/api/notes/${id}`),
+  getRecentNotes: (limit?: number, filters?: { entityType?: string; category?: string }) => api.get<NoteData[]>(`/api/notes/recent/${limit || 10}`, { params: filters }),
+  getUserNotes: (userId: string, filters?: { entityType?: string; category?: string; limit?: number }) => api.get<NoteData[]>(`/api/notes/user/${userId}`, { params: filters }),
 };
 
 export const trailerCustomCompaniesAPI = {
@@ -351,4 +351,8 @@ export const adminAPI = {
   activateUser: (userId: string) => api.patch(`/api/admin/users/${userId}/activate`),
 
   cleanupOrphanedUsers: () => api.post('/api/admin/cleanup-orphaned-users'),
+  getPermissions: () => api.get<any>('/api/admin/permissions'),
+  getUserPermissions: (userId: string) => api.get<any>(`/api/admin/users/${userId}/permissions`),
+  updateUserPermissions: (userId: string, permissions: { blockPermissions: string[], granularPermissions: string[] }) => 
+    api.put<any>(`/api/admin/users/${userId}/permissions`, permissions),
 };

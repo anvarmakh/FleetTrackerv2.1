@@ -247,7 +247,7 @@ class UserManager extends BaseManager {
      * @returns {Promise<Object|null>} User data or null if authentication fails
      */
     async authenticateUser(email, password, tenantId = null) {
-        console.log(`🔍 Authenticating user: ${email}, tenantId: ${tenantId}`);
+        // Authenticating user with optional tenant validation
         
         // Fetch user with password hash
         const userRecord = await this.execute(
@@ -262,15 +262,11 @@ class UserManager extends BaseManager {
         );
 
         if (!userRecord) {
-            console.log(`❌ User not found: ${email}`);
             return null;
         }
 
-        console.log(`✅ User found: ${userRecord.email}, role: ${userRecord.organizationRole}, tenant: ${userRecord.tenantId}`);
-
-        // Optional tenant check if provided by client flow
-        if (tenantId && userRecord.tenantId && userRecord.tenantId !== tenantId) {
-            console.log(`❌ Tenant mismatch: expected ${tenantId}, got ${userRecord.tenantId}`);
+        // Optional tenant check if provided by client flow - case insensitive
+        if (tenantId && userRecord.tenantId && userRecord.tenantId.toLowerCase() !== tenantId.toLowerCase()) {
             return null;
         }
 
@@ -278,7 +274,6 @@ class UserManager extends BaseManager {
         console.log(`🔐 Verifying password for user: ${userRecord.email}`);
         const isPasswordValid = await encryptionUtil.comparePassword(password, userRecord.passwordHash);
         if (!isPasswordValid) {
-            console.log(`❌ Password verification failed for user: ${userRecord.email}`);
             return null;
         }
 

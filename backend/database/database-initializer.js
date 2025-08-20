@@ -144,6 +144,7 @@ async function createDatabaseSchema(db) {
             language TEXT DEFAULT 'en',
             tenant_id TEXT NOT NULL,
             organization_role TEXT DEFAULT 'user',
+            custom_permissions TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             last_login DATETIME,

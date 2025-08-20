@@ -20,8 +20,8 @@ const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Check if user has settings permissions
-  const hasSettingsAccess = user?.organizationRole === 'owner' || user?.organizationRole === 'admin';
+  // Check if user has settings permissions (using new permission system)
+  const hasSettingsAccess = user?.organizationRole === 'owner' || user?.organizationRole === 'admin' || user?.organizationRole === 'manager';
   
   if (!hasSettingsAccess) {
     return (

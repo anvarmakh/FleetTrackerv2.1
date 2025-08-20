@@ -16,7 +16,7 @@ const router = express.Router();
 // ============================================================================
 
 // Get all inspections for a company
-router.get('/inspections', authenticateToken, validateTenant, async (req, res) => {
+router.get('/inspections', authenticateToken, validateTenant, requirePermission('fleet_view'), async (req, res) => {
     try {
         const { companyId, trailerId, status, inspectionType } = req.query;
         
@@ -84,7 +84,7 @@ router.get('/inspections/:id', authenticateToken, validateTenant, async (req, re
 });
 
 // Create new inspection
-router.post('/inspections', authenticateToken, validateTenant, async (req, res) => {
+router.post('/inspections', authenticateToken, validateTenant, requirePermission('fleet_create'), async (req, res) => {
     try {
         const inspectionData = req.body;
         
@@ -147,7 +147,7 @@ router.post('/inspections', authenticateToken, validateTenant, async (req, res) 
 });
 
 // Update inspection
-router.put('/inspections/:id', authenticateToken, validateTenant, async (req, res) => {
+router.put('/inspections/:id', authenticateToken, validateTenant, requirePermission('fleet_edit'), async (req, res) => {
     try {
         const { id } = req.params;
         const updates = req.body;
@@ -178,7 +178,7 @@ router.put('/inspections/:id', authenticateToken, validateTenant, async (req, re
 });
 
 // Delete inspection
-router.delete('/inspections/:id', authenticateToken, validateTenant, async (req, res) => {
+router.delete('/inspections/:id', authenticateToken, validateTenant, requirePermission('fleet_delete'), async (req, res) => {
     try {
         const { id } = req.params;
         

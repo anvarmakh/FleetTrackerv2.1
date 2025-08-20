@@ -1,179 +1,232 @@
+const { permissionsManager } = require('../database/database-manager');
 const { PermissionsManager } = require('../database/database-manager');
+const logger = require('../utils/logger');
 
 /**
- * Middleware to check if user has a specific permission
+ * Middleware to require a specific permission
+ * Works with both block-level and granular permissions
  */
-function requirePermission(permission) {
-    return (req, res, next) => {
+const requirePermission = (requiredPermission) => {
+    return async (req, res, next) => {
         try {
-            const userRole = req.user.organizationRole;
+            // Get user from request (set by authenticateToken middleware)
+            const user = req.user;
             
-            if (!userRole) {
-                return res.status(403).json({
+            if (!user) {
+                return res.status(401).json({
                     success: false,
-                    error: 'User role not found'
+                    error: 'Authentication required'
                 });
             }
 
-            if (PermissionsManager.hasPermission(userRole, permission)) {
-                next();
-            } else {
+            // Get user's effective permissions
+            const userPermissions = await permissionsManager.getUserPermissions(user.id);
+            
+            // Check if user has the required permission
+            const hasPermission = PermissionsManager.hasPermission(userPermissions, requiredPermission);
+            
+            if (!hasPermission) {
+                logger.warn(`Permission denied: User ${user.id} (${user.email}) attempted to access ${req.method} ${req.originalUrl} without permission: ${requiredPermission}`);
+                
                 return res.status(403).json({
                     success: false,
                     error: 'Insufficient permissions',
-                    requiredPermission: permission,
-                    userRole: userRole
+                    requiredPermission: requiredPermission,
+                    message: `You don't have permission to perform this action. Required: ${requiredPermission}`
                 });
             }
+
+            // Add user permissions to request for potential use in route handlers
+            req.userPermissions = userPermissions;
+            
+            next();
         } catch (error) {
-            console.error('Permission check error:', error);
+            logger.error('Error in requirePermission middleware:', error);
             return res.status(500).json({
                 success: false,
-                error: 'Permission check failed'
+                error: 'Internal server error during permission check'
             });
         }
     };
-}
+};
 
 /**
- * Middleware to check if user can assign a specific role
+ * Middleware to require any of the specified permissions (OR logic)
  */
-function requireRoleAssignmentPermission(targetRole) {
-    return (req, res, next) => {
+const requireAnyPermission = (requiredPermissions) => {
+    return async (req, res, next) => {
         try {
-            const userRole = req.user.organizationRole;
+            const user = req.user;
             
-            if (!userRole) {
-                return res.status(403).json({
+            if (!user) {
+                return res.status(401).json({
                     success: false,
-                    error: 'User role not found'
+                    error: 'Authentication required'
                 });
             }
 
-            if (PermissionsManager.canAssignRole(userRole, targetRole)) {
-                next();
-            } else {
-                return res.status(403).json({
-                    success: false,
-                    error: 'Cannot assign this role',
-                    targetRole: targetRole,
-                    userRole: userRole
-                });
-            }
-        } catch (error) {
-            console.error('Role assignment check error:', error);
-            return res.status(500).json({
-                success: false,
-                error: 'Role assignment check failed'
-            });
-        }
-    };
-}
-
-/**
- * Middleware to check if user has any of the specified permissions
- */
-function requireAnyPermission(permissions) {
-    return (req, res, next) => {
-        try {
-            const userRole = req.user.organizationRole;
+            const userPermissions = await permissionsManager.getUserPermissions(user.id);
             
-            if (!userRole) {
-                return res.status(403).json({
-                    success: false,
-                    error: 'User role not found'
-                });
-            }
-
-            const hasAnyPermission = permissions.some(permission => 
-                PermissionsManager.hasPermission(userRole, permission)
+            // Check if user has any of the required permissions
+            const hasAnyPermission = requiredPermissions.some(permission => 
+                PermissionsManager.hasPermission(userPermissions, permission)
             );
-
-            if (hasAnyPermission) {
-                next();
-            } else {
-                return res.status(403).json({
-                    success: false,
-                    error: 'Insufficient permissions',
-                    requiredPermissions: permissions,
-                    userRole: userRole
-                });
-            }
-        } catch (error) {
-            console.error('Permission check error:', error);
-            return res.status(500).json({
-                success: false,
-                error: 'Permission check failed'
-            });
-        }
-    };
-}
-
-/**
- * Middleware to check if user has all of the specified permissions
- */
-function requireAllPermissions(permissions) {
-    return (req, res, next) => {
-        try {
-            const userRole = req.user.organizationRole;
             
-            if (!userRole) {
-                return res.status(403).json({
-                    success: false,
-                    error: 'User role not found'
-                });
-            }
-
-            const hasAllPermissions = permissions.every(permission => 
-                PermissionsManager.hasPermission(userRole, permission)
-            );
-
-            if (hasAllPermissions) {
-                next();
-            } else {
+            if (!hasAnyPermission) {
+                logger.warn(`Permission denied: User ${user.id} (${user.email}) attempted to access ${req.method} ${req.originalUrl} without any of the required permissions: ${requiredPermissions.join(', ')}`);
+                
                 return res.status(403).json({
                     success: false,
                     error: 'Insufficient permissions',
-                    requiredPermissions: permissions,
-                    userRole: userRole
+                    requiredPermissions: requiredPermissions,
+                    message: `You don't have permission to perform this action. Required: ${requiredPermissions.join(' OR ')}`
                 });
             }
+
+            req.userPermissions = userPermissions;
+            next();
         } catch (error) {
-            console.error('Permission check error:', error);
+            logger.error('Error in requireAnyPermission middleware:', error);
             return res.status(500).json({
                 success: false,
-                error: 'Permission check failed'
+                error: 'Internal server error during permission check'
             });
         }
     };
-}
+};
 
 /**
- * Helper function to get user permissions for frontend
+ * Middleware to require all of the specified permissions (AND logic)
  */
-function getUserPermissions(userRole) {
-    return PermissionsManager.getPermissionsForRole(userRole);
-}
+const requireAllPermissions = (requiredPermissions) => {
+    return async (req, res, next) => {
+        try {
+            const user = req.user;
+            
+            if (!user) {
+                return res.status(401).json({
+                    success: false,
+                    error: 'Authentication required'
+                });
+            }
+
+            const userPermissions = await permissionsManager.getUserPermissions(user.id);
+            
+            // Check if user has all of the required permissions
+            const hasAllPermissions = requiredPermissions.every(permission => 
+                PermissionsManager.hasPermission(userPermissions, permission)
+            );
+            
+            if (!hasAllPermissions) {
+                const missingPermissions = requiredPermissions.filter(permission => 
+                    !PermissionsManager.hasPermission(userPermissions, permission)
+                );
+                
+                logger.warn(`Permission denied: User ${user.id} (${user.email}) attempted to access ${req.method} ${req.originalUrl} missing permissions: ${missingPermissions.join(', ')}`);
+                
+                return res.status(403).json({
+                    success: false,
+                    error: 'Insufficient permissions',
+                    requiredPermissions: requiredPermissions,
+                    missingPermissions: missingPermissions,
+                    message: `You don't have all required permissions. Missing: ${missingPermissions.join(', ')}`
+                });
+            }
+
+            req.userPermissions = userPermissions;
+            next();
+        } catch (error) {
+            logger.error('Error in requireAllPermissions middleware:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Internal server error during permission check'
+            });
+        }
+    };
+};
 
 /**
- * Helper function to get assignable roles for frontend
+ * Middleware to check if user has a specific permission (non-blocking)
+ * Adds permission info to request but doesn't block if missing
  */
-function getAssignableRoles(userRole) {
-    return PermissionsManager.getAssignableRoles(userRole);
-}
+const checkPermission = (permission) => {
+    return async (req, res, next) => {
+        try {
+            const user = req.user;
+            
+            if (!user) {
+                req.hasPermission = false;
+                return next();
+            }
 
-// Unified role check
-function hasRole(req, requiredRole) {
-    const user = req.user;
-    return user && (user.organizationRole === requiredRole || user.systemRole === requiredRole);
-}
+            const userPermissions = await permissionsManager.getUserPermissions(user.id);
+            
+            req.hasPermission = PermissionsManager.hasPermission(userPermissions, permission);
+            req.userPermissions = userPermissions;
+            
+            next();
+        } catch (error) {
+            logger.error('Error in checkPermission middleware:', error);
+            req.hasPermission = false;
+            next();
+        }
+    };
+};
+
+/**
+ * Middleware to require super admin access
+ */
+const requireSuperAdmin = async (req, res, next) => {
+    try {
+        const user = req.user;
+        
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required'
+            });
+        }
+
+        if (user.organizationRole !== 'owner') {
+            logger.warn(`Super admin access denied: User ${user.id} (${user.email}) attempted to access ${req.method} ${req.originalUrl}`);
+            
+            return res.status(403).json({
+                success: false,
+                error: 'Super admin access required',
+                message: 'This action requires super administrator privileges'
+            });
+        }
+
+        next();
+    } catch (error) {
+        logger.error('Error in requireSuperAdmin middleware:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Internal server error during super admin check'
+            });
+    }
+};
+
+/**
+ * Utility function to check if user has permission (for use in route handlers)
+ */
+const hasPermission = (userPermissions, permission) => {
+    return PermissionsManager.hasPermission(userPermissions, permission);
+};
+
+/**
+ * Utility function to get user's effective permissions (for use in route handlers)
+ */
+const getUserEffectivePermissions = async (userId) => {
+    return await permissionsManager.getUserPermissions(userId);
+};
 
 module.exports = {
     requirePermission,
-    requireRoleAssignmentPermission,
     requireAnyPermission,
     requireAllPermissions,
-    getUserPermissions,
-    getAssignableRoles,
-    PermissionsManager
+    checkPermission,
+    requireSuperAdmin,
+    hasPermission,
+    getUserEffectivePermissions
 }; 

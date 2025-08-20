@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const geocodingService = require('../services/geocoding');
 const { authenticateToken } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 
 // GET /api/geocode - Geocode an address
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, requirePermission('fleet_view'), async (req, res) => {
     try {
         const { address } = req.query;
         
@@ -31,7 +32,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // POST /api/geocode/reverse - Reverse geocode coordinates
-router.post('/reverse', authenticateToken, async (req, res) => {
+router.post('/reverse', authenticateToken, requirePermission('fleet_view'), async (req, res) => {
     try {
         const { lat, lng } = req.body;
         
@@ -58,7 +59,7 @@ router.post('/reverse', authenticateToken, async (req, res) => {
 });
 
 // POST /api/geocode/validate - Validate an address
-router.post('/validate', authenticateToken, async (req, res) => {
+router.post('/validate', authenticateToken, requirePermission('fleet_view'), async (req, res) => {
     try {
         const { address } = req.body;
         

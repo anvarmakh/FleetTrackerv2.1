@@ -223,12 +223,15 @@ router.post('/register', async (req, res) => {
             });
         }
         
+        // Hash password
+        const hashedPassword = await encryptionUtil.hashPassword(password);
+        
         // Create user with tenant support
         const user = await userManager.createUserWithTenant({
             firstName: firstName.trim(),
             lastName: lastName.trim(),
             email: email.trim(),
-            password: password,
+            password: hashedPassword,
             tenantId: finalTenantId
         });
 

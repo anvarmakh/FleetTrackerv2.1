@@ -1,396 +1,369 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Crown, 
-  Shield, 
-  Users as UsersIcon, 
-  CheckCircle,
-  Building,
-  Truck,
-  FileText,
-  Settings,
-  BarChart3,
-  Key,
-  Palette,
-  Zap,
-  Star,
-  UserCheck,
-  UserCog
-} from 'lucide-react';
-import { Role, User, PermissionCategory } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { adminAPI } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
+import { UserData } from '@/types';
 
-interface RoleManagementProps {
-  roles: Role[];
-  users: User[];
-  selectedRole: Role | null;
-  editingRole: Role | null;
-  permissionCategories: PermissionCategory[];
-  onRoleSelect: (role: Role) => void;
-  onEditRole: (role: Role) => void;
-  onDeleteCustomRole: (roleName: string) => void;
-  onSaveRolePermissions: () => void;
-  onCancelEdit: () => void;
-  onCategoryToggle: (category: PermissionCategory, checked: boolean) => void;
-  onPermissionToggle: (permission: string) => void;
-  onCreateRole: () => void;
+interface PermissionStructure {
+  permissionStructure: {
+    fleet: {
+      name: string;
+      icon: string;
+      blocks: string[];
+      granular: {
+        [key: string]: {
+          name: string;
+          permissions: string[];
+        };
+      };
+    };
+    organization: {
+      name: string;
+      icon: string;
+      blocks: string[];
+      granular: {
+        [key: string]: {
+          name: string;
+          permissions: string[];
+        };
+      };
+    };
+    analytics: {
+      name: string;
+      icon: string;
+      blocks: string[];
+      granular: {
+        [key: string]: {
+          name: string;
+          permissions: string[];
+        };
+      };
+    };
+    utilities: {
+      name: string;
+      icon: string;
+      blocks: string[];
+      granular: {
+        [key: string]: {
+          name: string;
+          permissions: string[];
+        };
+      };
+    };
+  };
+  roleTemplates: {
+    [key: string]: {
+      name: string;
+      description: string;
+      blockPermissions: string[];
+      granularPermissions: string[];
+    };
+  };
+  blockPermissions: { [key: string]: string };
+  granularPermissions: { [key: string]: string };
 }
 
-const RoleManagement: React.FC<RoleManagementProps> = ({
-  roles,
-  users,
-  selectedRole,
-  editingRole,
-  permissionCategories,
-  onRoleSelect,
-  onEditRole,
-  onDeleteCustomRole,
-  onSaveRolePermissions,
-  onCancelEdit,
-  onCategoryToggle,
-  onPermissionToggle,
-  onCreateRole
-}) => {
-  const getRoleIcon = (roleName: string) => {
-    const roleNameLower = roleName.toLowerCase();
-    
-    const iconMap: { [key: string]: React.ReactNode } = {
-      owner: <Crown className="w-5 h-5 text-purple-600" />,
-      superadmin: <Crown className="w-5 h-5 text-purple-600" />,
-      admin: <Shield className="w-5 h-5 text-blue-600" />,
-      manager: <UserCog className="w-5 h-5 text-green-600" />,
-      user: <UserCheck className="w-5 h-5 text-gray-600" />
+interface RoleManagementProps {
+  users: UserData[];
+  onUserUpdate: () => void;
+}
+
+const RoleManagement: React.FC<RoleManagementProps> = ({ users, onUserUpdate }) => {
+  const [permissionStructure, setPermissionStructure] = useState<PermissionStructure | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [blockPermissions, setBlockPermissions] = useState<string[]>([]);
+  const [granularPermissions, setGranularPermissions] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const { toast } = useToast();
+
+  // Load permission structure
+  useEffect(() => {
+    const loadPermissionStructure = async () => {
+      try {
+        const response = await adminAPI.getPermissions();
+        setPermissionStructure(response.data.data);
+      } catch (error) {
+        console.error('Error loading permission structure:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load permission structure",
+          variant: "destructive",
+        });
+      }
     };
+
+    loadPermissionStructure();
+  }, [toast]);
+
+  // Load user permissions when user is selected
+  useEffect(() => {
+    if (selectedUser) {
+      loadUserPermissions(selectedUser.id);
+    }
+  }, [selectedUser]);
+
+  const loadUserPermissions = async (userId: string) => {
+    try {
+      setLoading(true);
+      const response = await adminAPI.getUserPermissions(userId);
+      const permissions = response.data.data.permissions;
+      setUserPermissions(permissions);
+      
+      // Parse block and granular permissions
+      const blocks = permissions.filter((p: string) => p.includes('_view') || p.includes('_create') || p.includes('_edit') || p.includes('_delete') || p.includes('_admin'));
+      const granular = permissions.filter((p: string) => !p.includes('_view') && !p.includes('_create') && !p.includes('_edit') && !p.includes('_delete') && !p.includes('_admin'));
+      
+      setBlockPermissions(blocks);
+      setGranularPermissions(granular);
+    } catch (error) {
+      console.error('Error loading user permissions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load user permissions",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRoleTemplateSelect = (roleName: string) => {
+    if (!permissionStructure) return;
+
+    const template = permissionStructure.roleTemplates[roleName];
+    if (template) {
+      setBlockPermissions(template.blockPermissions);
+      setGranularPermissions(template.granularPermissions);
+    }
+  };
+
+  const handleBlockPermissionToggle = (permission: string) => {
+    setBlockPermissions(prev => {
+      if (prev.includes(permission)) {
+        return prev.filter(p => p !== permission);
+      } else {
+        return [...prev, permission];
+      }
+    });
+  };
+
+  const handleGranularPermissionToggle = (permission: string) => {
+    setGranularPermissions(prev => {
+      if (prev.includes(permission)) {
+        return prev.filter(p => p !== permission);
+      } else {
+        return [...prev, permission];
+      }
+    });
+  };
+
+  const handleSavePermissions = async () => {
+    if (!selectedUser) return;
+
+    try {
+      setLoading(true);
+      await adminAPI.updateUserPermissions(selectedUser.id, {
+        blockPermissions,
+        granularPermissions
+      });
+      
+      toast({
+        title: "Success",
+        description: "User permissions updated successfully",
+      });
+      onUserUpdate();
+    } catch (error) {
+      console.error('Error updating user permissions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update user permissions",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getPermissionDisplayName = (permission: string) => {
+    if (!permissionStructure) return permission;
     
-    return iconMap[roleNameLower] || <UsersIcon className="w-5 h-5 text-gray-600" />;
+    // Check block permissions
+    const blockName = Object.entries(permissionStructure.blockPermissions).find(([key, value]) => value === permission);
+    if (blockName) {
+      return blockName[0].replace(/_/g, ' ').toUpperCase();
+    }
+    
+    // Check granular permissions
+    const granularName = Object.entries(permissionStructure.granularPermissions).find(([key, value]) => value === permission);
+    if (granularName) {
+      return granularName[0].replace(/_/g, ' ').toUpperCase();
+    }
+    
+    return permission;
   };
 
-  const getPermissionCategoryIcon = (categoryName: string) => {
-    const iconMap: { [key: string]: React.ReactNode } = {
-      'User Management': <UsersIcon className="w-4 h-4" />,
-      'Company Management': <Building className="w-4 h-4" />,
-      'Trailer Management': <Truck className="w-4 h-4" />,
-      'GPS Provider Management': <Key className="w-4 h-4" />,
-      'Location Management': <Palette className="w-4 h-4" />,
-      'Notes Management': <FileText className="w-4 h-4" />,
-      'Settings & Configuration': <Settings className="w-4 h-4" />,
-      'Reports & Analytics': <BarChart3 className="w-4 h-4" />,
-      'Role Assignment': <UserCog className="w-4 h-4" />
-    };
-    return iconMap[categoryName] || <Shield className="w-4 h-4" />;
-  };
-
-  const formatPermissionName = (permission: string) => {
-    return permission
-      .replace(/_/g, ' ')
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  };
-
-  return (
-    <div className="space-y-6">
+  if (!permissionStructure) {
+    return (
       <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Roles List */}
-            <div className="lg:col-span-1 space-y-4">
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  {roles.map((role) => {
-                    const userCount = users.filter(u => (u.organizationRole || u.organization_role) === role.name).length;
-                    return (
-                      <div
-                        key={role.name}
-                        className={`group relative p-3 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.01] ${
-                          selectedRole?.name === role.name
-                            ? 'border-primary bg-primary/5 shadow-md'
-                            : 'border-border hover:border-primary/50 hover:bg-muted/30'
-                        }`}
-                        onClick={() => onRoleSelect(role)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 flex-1">
-                            <div className="flex items-center justify-center">
-                              {getRoleIcon(role.name)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h4 className="font-semibold text-sm truncate">{role.displayName}</h4>
-                                {role.isCustom && (
-                                  <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                                    Custom
-                                  </Badge>
-                                )}
-                                {!role.isCustom && (
-                                  <Badge variant="outline" className="text-xs px-1.5 py-0">
-                                    System
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <UsersIcon className="w-3 h-3" />
-                                  <span>{userCount} user{userCount !== 1 ? 's' : ''}</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <Shield className="w-3 h-3" />
-                                  <span>{role.permissions.length} permissions</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {role.isCustom && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDeleteCustomRole(role.name);
-                                }}
-                                className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                
-                {/* Create Role Button at the bottom */}
-                <div className="pt-4 border-t border-border">
-                  <Button 
-                    onClick={onCreateRole} 
-                    className="w-full gap-2"
-                    variant="outline"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Create New Role
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Role Details */}
-            <div className="lg:col-span-2 space-y-4">
-              {selectedRole ? (
-                <div className="space-y-6">
-                  {/* Role Header */}
-                  <div className="flex items-start justify-between p-4 bg-muted/20 rounded-lg border border-border/50">
-                    <div className="flex items-start gap-4">
-                      <div className="flex items-center justify-center">
-                        {getRoleIcon(selectedRole.name)}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-lg font-semibold">{selectedRole.displayName}</h3>
-                          {selectedRole.isCustom && (
-                            <Badge variant="secondary" className="text-xs px-2 py-0">Custom Role</Badge>
-                          )}
-                          {!selectedRole.isCustom && (
-                            <Badge variant="outline" className="text-xs px-2 py-0">System Role</Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-                          {selectedRole.description}
-                        </p>
-                        <div className="flex items-center gap-4 text-sm">
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <Shield className="w-4 h-4" />
-                            <span>{selectedRole.permissions.length} permissions</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <UsersIcon className="w-4 h-4" />
-                            <span>{users.filter(u => (u.organizationRole || u.organization_role) === selectedRole.name).length} users assigned</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {selectedRole.isCustom && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onDeleteCustomRole(selectedRole.name)}
-                          className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                        >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Delete Role
-                        </Button>
-                      )}
-                      <Button
-                        onClick={() => onEditRole(selectedRole)}
-                        className="gap-2"
-                      >
-                        <Edit className="w-4 h-4" />
-                        Edit Permissions
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {/* Permissions Grid */}
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-lg font-semibold flex items-center gap-2">
-                        <Shield className="w-5 h-5" />
-                        Permissions
-                      </h4>
-                      {editingRole && editingRole.name === selectedRole.name && (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={onCancelEdit}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={onSaveRolePermissions}
-                          >
-                            Save Changes
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {permissionCategories.map((category) => (
-                        <Card key={category.name} className="overflow-hidden">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center gap-2">
-                              {getPermissionCategoryIcon(category.name)}
-                              <CardTitle className="text-sm">
-                                {formatPermissionName(category.name)}
-                              </CardTitle>
-                              <Badge variant="outline" className="ml-auto">
-                                {category.permissions.filter(p => selectedRole.permissions.includes(p)).length}/{category.permissions.length}
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <div className="space-y-2">
-                              {editingRole && editingRole.name === selectedRole.name ? (
-                                // Edit mode - show checkboxes
-                                <>
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`edit-category-${category.name}`}
-                                      checked={category.permissions.every(p => editingRole.permissions.includes(p))}
-                                      onCheckedChange={(checked) => 
-                                        onCategoryToggle(category, checked as boolean)
-                                      }
-                                    />
-                                    <Label htmlFor={`edit-category-${category.name}`} className="text-sm font-medium">
-                                      Select All
-                                    </Label>
-                                  </div>
-                                  <Separator />
-                                  <div className="space-y-2">
-                                    {category.permissions.map((permission) => (
-                                      <div key={permission} className="flex items-center space-x-2">
-                                        <Checkbox
-                                          id={`edit-permission-${permission}`}
-                                          checked={editingRole.permissions.includes(permission)}
-                                          onCheckedChange={() => onPermissionToggle(permission)}
-                                        />
-                                        <Label htmlFor={`edit-permission-${permission}`} className="text-sm">
-                                          {formatPermissionName(permission)}
-                                        </Label>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </>
-                              ) : (
-                                // View mode - show current permissions
-                                category.permissions.map((permission) => (
-                                  <div
-                                    key={permission}
-                                    className={`flex items-center gap-2 p-2 rounded-md transition-colors ${
-                                      selectedRole.permissions.includes(permission)
-                                        ? 'bg-primary/10 border border-primary/20'
-                                        : 'bg-muted/30'
-                                    }`}
-                                  >
-                                    {selectedRole.permissions.includes(permission) ? (
-                                      <CheckCircle className="w-4 h-4 text-primary" />
-                                    ) : (
-                                      <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30" />
-                                    )}
-                                    <span className="text-sm font-medium">
-                                      {formatPermissionName(permission)}
-                                    </span>
-                                  </div>
-                                ))
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Users with this role */}
-                  <div>
-                    <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <UsersIcon className="w-5 h-5" />
-                      Users with this Role
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {users.filter(u => (u.organizationRole || u.organization_role) === selectedRole.name).map((user) => (
-                        <div key={user.id} className="group flex items-center gap-3 p-3 border rounded-lg hover:border-primary/50 hover:bg-primary/5 transition-all duration-200">
-                          <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-semibold text-primary">
-                              {(user.firstName || user.first_name || '')[0]}{(user.lastName || user.last_name || '')[0]}
-                            </span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                              {user.firstName || user.first_name || ''} {user.lastName || user.last_name || ''}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {user.email}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                      {users.filter(u => (u.organizationRole || u.organization_role) === selectedRole.name).length === 0 && (
-                        <div className="col-span-full text-center py-12 text-muted-foreground">
-                          <div className="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <UsersIcon className="w-8 h-8 opacity-50" />
-                          </div>
-                          <p className="text-lg font-medium mb-2">No users assigned</p>
-                          <p className="text-sm">This role currently has no assigned users</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-16">
-                  <div className="w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Crown className="w-10 h-10 text-primary/60" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-3 text-foreground">Select a Role</h3>
-                  <p className="text-muted-foreground text-base max-w-md mx-auto leading-relaxed">
-                    Choose a role from the list to view its details, permissions, and assigned users
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+        <CardContent className="p-6">
+          <div className="text-center">Loading permission structure...</div>
         </CardContent>
       </Card>
+    );
+  }
+  return (
+    <div className="space-y-6">
+      {/* User Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>User Selection</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Select onValueChange={(userId) => setSelectedUser(users.find(u => u.id === userId) || null)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a user to manage permissions" />
+            </SelectTrigger>
+            <SelectContent>
+              {users.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.firstName} {user.lastName} ({user.email}) - {user.organizationRole}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
+      {selectedUser && (
+        <>
+          {/* Role Templates */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Role Assignment</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(permissionStructure.roleTemplates).map(([roleName, template]) => (
+                  <Card key={roleName} className="cursor-pointer hover:bg-muted/50">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold capitalize">{template.name}</h4>
+                        <Badge variant="secondary">{template.blockPermissions.length} blocks</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">{template.description}</p>
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleRoleTemplateSelect(roleName)}
+                        className="w-full"
+                      >
+                        Apply Template
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Permission Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                Permission Management for {selectedUser.firstName} {selectedUser.lastName}
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                >
+                  {showAdvanced ? 'Hide' : 'Show'} Advanced Options
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="blocks" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="blocks">Block Permissions</TabsTrigger>
+                  <TabsTrigger value="granular">Granular Permissions</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="blocks" className="space-y-4">
+                  {Object.entries(permissionStructure.permissionStructure).map(([groupKey, group]) => (
+                    <div key={groupKey} className="space-y-3">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <span>{group.icon}</span>
+                        {group.name}
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {group.blocks.map((blockPermission) => (
+                          <div key={blockPermission} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={blockPermission}
+                              checked={blockPermissions.includes(blockPermission)}
+                              onCheckedChange={() => handleBlockPermissionToggle(blockPermission)}
+                            />
+                            <Label htmlFor={blockPermission} className="text-sm">
+                              {getPermissionDisplayName(blockPermission)}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </TabsContent>
+
+                <TabsContent value="granular" className="space-y-4">
+                  {showAdvanced && Object.entries(permissionStructure.permissionStructure).map(([groupKey, group]) => (
+                    <div key={groupKey} className="space-y-3">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <span>{group.icon}</span>
+                        {group.name}
+                      </h3>
+                      {Object.entries(group.granular).map(([subKey, subGroup]) => (
+                        <div key={subKey} className="ml-4 space-y-2">
+                          <h4 className="font-medium text-sm">{subGroup.name}</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {subGroup.permissions.map((permission) => (
+                              <div key={permission} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={permission}
+                                  checked={granularPermissions.includes(permission)}
+                                  onCheckedChange={() => handleGranularPermissionToggle(permission)}
+                                />
+                                <Label htmlFor={permission} className="text-xs">
+                                  {getPermissionDisplayName(permission)}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                  {!showAdvanced && (
+                    <div className="text-center text-muted-foreground py-8">
+                      Enable "Advanced Options" to manage granular permissions
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+
+              <div className="flex justify-end mt-6">
+                <Button onClick={handleSavePermissions} disabled={loading}>
+                  {loading ? 'Saving...' : 'Save Permissions'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 };

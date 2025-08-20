@@ -1,12 +1,13 @@
 const express = require('express');
 const { authenticateToken, validateTenant } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 const { statsManager, companyManager } = require('../database/database-manager');
 const { asyncHandler } = require('../middleware/error-handling');
 
 const router = express.Router();
 
 // Get statistics
-router.get('/', authenticateToken, validateTenant, asyncHandler(async (req, res) => {
+router.get('/', authenticateToken, validateTenant, requirePermission('analytics_view'), asyncHandler(async (req, res) => {
     const { companyId } = req.query;
     
     if (companyId) {

@@ -300,7 +300,7 @@ const Trailers = () => {
       // Load notes for active trailers in parallel
       const notePromises = trailersWithNotes.map(async (trailer) => {
         try {
-          const response = await systemNotesAPI.getTrailerNotes(trailer.id);
+          const response = await systemNotesAPI.getNotes('trailer', trailer.id);
           if (response.data.success && response.data.data.length > 0) {
             return { trailerId: trailer.id, note: response.data.data[0] };
           }

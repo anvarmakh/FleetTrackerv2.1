@@ -141,7 +141,7 @@ router.put('/:id', authenticateToken, validateTenant, requirePermission('compani
 }));
 
 // Delete company
-router.delete('/:id', authenticateToken, validateTenant, asyncHandler(async (req, res) => {
+router.delete('/:id', authenticateToken, validateTenant, requirePermission('org_delete'), asyncHandler(async (req, res) => {
     try {
         const { id } = req.params;
 

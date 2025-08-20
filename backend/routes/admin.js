@@ -7,6 +7,8 @@ const { COMPANY_TYPES, USER_ROLES } = require('../utils/constants');
 const cacheService = require('../services/cache-service');
 const rateLimiter = require('../services/rate-limiter');
 const logger = require('../utils/logger');
+const encryptionUtil = require('../utils/encryption');
+const { PermissionsManager } = require('../database/database-manager');
 
 // Rate limiting for admin routes (more restrictive than regular routes)
 const { createRateLimiter } = require('../middleware/rate-limit');
@@ -17,6 +19,16 @@ const adminRateLimiter = createRateLimiter({
 });
 
 const router = express.Router();
+
+// Helper function to generate secure temporary passwords
+const generateSecurePassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+};
 
 // SuperAdmin middleware - check if user is system SuperAdmin
 const requireSuperAdmin = (req, res, next) => {
@@ -397,8 +409,9 @@ router.post('/tenants', authenticateToken, requireSuperAdmin, async (req, res) =
             companyColor
         } = req.body;
         
-        if (!tenantName || !email || !firstName || 
-            !lastName || !password || !companyName) {
+        // Validate required fields
+        if (!tenantName?.trim() || !email?.trim() || !firstName?.trim() || 
+            !lastName?.trim() || !password?.trim() || !companyName?.trim()) {
             return res.status(400).json({
                 success: false,
                 error: 'Tenant name, company name, and user details are required'
@@ -429,15 +442,18 @@ router.post('/tenants', authenticateToken, requireSuperAdmin, async (req, res) =
             });
         }
         
+        // Hash password for initial owner user
+        const hashedPassword = await encryptionUtil.hashPassword(password);
+        
         // Create tenant and initial owner user
         const userData = {
-            firstName: firstName,
-            lastName: lastName,
-            email: email,
-            password: password,
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            email: email.trim().toLowerCase(),
+            password: hashedPassword,
             organizationRole: USER_ROLES.OWNER,
             tenantId: tenant_id,
-            tenantName: tenantName
+            tenantName: tenantName.trim()
         };
         
         const result = await userManager.createUserWithTenant(userData);
@@ -458,13 +474,13 @@ router.post('/tenants', authenticateToken, requireSuperAdmin, async (req, res) =
             data: {
                 tenant: {
                     tenantId: tenant_id,
-                    tenantName: tenantName,
+                    tenantName: tenantName.trim(),
                     createdAt: new Date().toISOString()
                 },
                 ownerUser: {
-                    email: email,
-                    firstName: firstName,
-                    lastName: lastName,
+                    email: email.trim().toLowerCase(),
+                    firstName: firstName.trim(),
+                    lastName: lastName.trim(),
                     organizationRole: USER_ROLES.OWNER,
                     tenantId: tenant_id,
                     createdAt: new Date().toISOString()
@@ -476,19 +492,19 @@ router.post('/tenants', authenticateToken, requireSuperAdmin, async (req, res) =
                     createdAt: new Date().toISOString()
                 },
                 loginInfo: {
-                    email: email,
+                    email: email.trim().toLowerCase(),
                     tenantId: tenant_id,
                     note: 'Use the tenantId above for login (it has been normalized to lowercase)'
                 }
             }
         });
-    } catch (error) {
-        console.error('Create tenant error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message || 'Failed to create tenant'
-        });
-    }
+            } catch (error) {
+            logger.error('Create tenant error:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message || 'Failed to create tenant'
+            });
+        }
 });
 
 // Create new user
@@ -496,7 +512,8 @@ router.post('/users', authenticateToken, requireSuperAdmin, async (req, res) => 
     try {
         const { email, tenantId, organizationRole, firstName, lastName } = req.body;
         
-        if (!email || !tenantId || !organizationRole) {
+        // Validate required fields
+        if (!email?.trim() || !tenantId?.trim() || !organizationRole) {
             return res.status(400).json({
                 success: false,
                 error: 'Email, tenant ID, and role are required'
@@ -512,17 +529,20 @@ router.post('/users', authenticateToken, requireSuperAdmin, async (req, res) => 
             });
         }
         
-        // Use provided password or generate a temporary one
-        const password = req.body.password || (Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase());
+        // Use provided password or generate a secure temporary one
+        const plainPassword = req.body.password || generateSecurePassword();
+        
+        // Hash password
+        const hashedPassword = await encryptionUtil.hashPassword(plainPassword);
         
         // Create new user in database
         const userData = {
-            firstName: firstName || '',
-            lastName: lastName || '',
-            email: email,
-            password: password,
+            firstName: (firstName || '').trim(),
+            lastName: (lastName || '').trim(),
+            email: email.trim().toLowerCase(),
+            password: hashedPassword,
             organizationRole: organizationRole,
-            tenantId: tenantId
+            tenantId: tenantId.trim()
         };
         
         const result = await userManager.createUserWithTenant(userData);
@@ -535,37 +555,36 @@ router.post('/users', authenticateToken, requireSuperAdmin, async (req, res) => 
                 // Assign user to the first company in the tenant
                 assignedCompany = companies[0];
                 await companyManager.assignUserToCompany(result.id, assignedCompany.id);
-                console.log(`✅ Admin user ${result.id} assigned to company ${assignedCompany.name} (${assignedCompany.id})`);
             } else {
-                console.warn(`⚠️ No companies found in tenant ${tenantId} for admin user assignment`);
+                logger.warn(`No companies found in tenant ${tenantId} for admin user assignment`);
             }
         } catch (error) {
-            console.error('❌ Could not assign admin user to company:', error.message);
+            logger.error('Could not assign admin user to company:', error.message);
         }
         
         res.json({
             success: true,
             message: 'User created successfully',
-                              data: {
-                      email,
-                      tenantId,
-                      organizationRole,
-                      firstName: firstName || '',
-                      lastName: lastName || '',
-                      createdAt: new Date().toISOString(),
-                      password: req.body.password ? 'Password set successfully' : password,
-                      companyId: assignedCompany ? assignedCompany.id : null,
-                      companyName: assignedCompany ? assignedCompany.name : null,
-                      note: req.body.password ? 'User can login with the provided password' : 'Please provide this temporary password to the user and ask them to change it on first login'
-                  }
+            data: {
+                email: email.trim().toLowerCase(),
+                tenantId: tenantId.trim(),
+                organizationRole,
+                firstName: (firstName || '').trim(),
+                lastName: (lastName || '').trim(),
+                createdAt: new Date().toISOString(),
+                temporaryPassword: req.body.password ? 'Password set successfully' : plainPassword,
+                companyId: assignedCompany ? assignedCompany.id : null,
+                companyName: assignedCompany ? assignedCompany.name : null,
+                note: req.body.password ? 'User can login with the provided password' : 'Please provide this temporary password to the user and ask them to change it on first login'
+            }
         });
-    } catch (error) {
-        console.error('Create user error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to create user'
-        });
-    }
+            } catch (error) {
+            logger.error('Create user error:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to create user'
+            });
+        }
 });
 
 
@@ -1116,6 +1135,83 @@ router.post('/clear-all-cache', adminRateLimiter, authenticateToken, requireSupe
         success: true,
         message: 'All cache and rate limiter data cleared'
     });
+}));
+
+// Get permission structure for role management
+router.get('/permissions', authenticateToken, requireSuperAdmin, asyncHandler(async (req, res) => {
+    try {
+        const permissionsManager = new PermissionsManager(req.db);
+        const permissionStructure = PermissionsManager.getPermissionGroups();
+        const roleTemplates = PermissionsManager.ROLE_TEMPLATES;
+        
+        res.json({
+            success: true,
+            data: {
+                permissionStructure,
+                roleTemplates,
+                blockPermissions: PermissionsManager.BLOCK_PERMISSIONS,
+                granularPermissions: PermissionsManager.GRANULAR_PERMISSIONS
+            }
+        });
+    } catch (error) {
+        logger.error('Error getting permission structure:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get permission structure'
+        });
+    }
+}));
+
+// Get user permissions
+router.get('/users/:userId/permissions', authenticateToken, requireSuperAdmin, asyncHandler(async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const permissionsManager = new PermissionsManager(req.db);
+        const userPermissions = await permissionsManager.getUserPermissions(userId);
+        
+        res.json({
+            success: true,
+            data: {
+                userId,
+                permissions: userPermissions
+            }
+        });
+    } catch (error) {
+        logger.error('Error getting user permissions:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get user permissions'
+        });
+    }
+}));
+
+// Update user permissions
+router.put('/users/:userId/permissions', authenticateToken, requireSuperAdmin, asyncHandler(async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { blockPermissions = [], granularPermissions = [] } = req.body;
+        
+        const permissionsManager = new PermissionsManager(req.db);
+        const success = await permissionsManager.updateUserPermissions(userId, blockPermissions, granularPermissions);
+        
+        if (success) {
+            res.json({
+                success: true,
+                message: 'User permissions updated successfully'
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                error: 'Failed to update user permissions'
+            });
+        }
+    } catch (error) {
+        logger.error('Error updating user permissions:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to update user permissions'
+        });
+    }
 }));
 
 module.exports = router; 

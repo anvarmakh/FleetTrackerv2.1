@@ -58,7 +58,7 @@ export default function NotesModal({ isOpen, onClose, trailerId, trailerName, on
   const loadNotes = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await systemNotesAPI.getTrailerNotes(trailerId);
+      const response = await systemNotesAPI.getNotes('trailer', trailerId);
       setNotes(response.data.data || []);
     } catch (error) {
       console.error('Error loading notes:', error);
@@ -86,7 +86,7 @@ export default function NotesModal({ isOpen, onClose, trailerId, trailerName, on
         await systemNotesAPI.updateNote(editingNote.id, formData);
         toast.success('Note updated successfully');
       } else {
-        await systemNotesAPI.createTrailerNote(trailerId, formData);
+        await systemNotesAPI.createNote('trailer', trailerId, formData);
         toast.success('Note created successfully');
       }
       
