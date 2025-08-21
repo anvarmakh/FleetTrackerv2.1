@@ -219,6 +219,21 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ users, onUserUpdate }) 
     }
   };
 
+  const getGroupIcon = (groupName: string) => {
+    const name = groupName.toLowerCase();
+    if (name.includes('users')) return <Users className="w-4 h-4 text-gray-600" />;
+    if (name.includes('roles')) return <Key className="w-4 h-4 text-gray-600" />;
+    if (name.includes('companies')) return <Building className="w-4 h-4 text-gray-600" />;
+    if (name.includes('providers')) return <Database className="w-4 h-4 text-gray-600" />;
+    if (name.includes('trailers')) return <Truck className="w-4 h-4 text-gray-600" />;
+    if (name.includes('locations')) return <MapPin className="w-4 h-4 text-gray-600" />;
+    if (name.includes('maintenance')) return <Wrench className="w-4 h-4 text-gray-600" />;
+    if (name.includes('notes')) return <FileText className="w-4 h-4 text-gray-600" />;
+    if (name.includes('preferences')) return <Palette className="w-4 h-4 text-gray-600" />;
+    if (name.includes('reports')) return <BarChart3 className="w-4 h-4 text-gray-600" />;
+    return <Settings className="w-4 h-4 text-gray-600" />;
+  };
+
   const getPermissionCategories = () => {
     if (!permissionStructure) return [];
     
@@ -891,9 +906,9 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ users, onUserUpdate }) 
                   
                   <div className="space-y-3">
                     {permissionCategories.map((category) => (
-                      <div key={category.name} className="bg-card rounded-lg">
+                      <div key={category.name} className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                         {/* Category Header */}
-                        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-t-lg">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
                           <div className="flex items-center gap-2">
                             <div className="p-1.5 rounded-md bg-primary/10">
                               {getCategoryIcon(category.name)}
@@ -912,8 +927,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ users, onUserUpdate }) 
                         </div>
 
                         {/* Permissions Table */}
-                        <div className="p-4">
-                          <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                        <div className="bg-white">
                             <table className="w-full text-sm bg-white">
                               <thead>
                                 <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
@@ -1084,27 +1098,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ users, onUserUpdate }) 
                                   <tr key={group.name} className={`hover:bg-gray-50 transition-all duration-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}`}>
                                     <td className="p-3 font-medium text-gray-800 flex items-center gap-2">
                                       <div className="p-1.5 rounded-md bg-gray-100">
-                                                    {group.name.toLowerCase().includes('users') && <Users className="w-4 h-4 text-gray-600" />}
-            {group.name.toLowerCase().includes('roles') && <Key className="w-4 h-4 text-gray-600" />}
-            {group.name.toLowerCase().includes('companies') && <Building className="w-4 h-4 text-gray-600" />}
-            {group.name.toLowerCase().includes('providers') && <Database className="w-4 h-4 text-gray-600" />}
-            {group.name.toLowerCase().includes('trailers') && <Truck className="w-4 h-4 text-gray-600" />}
-            {group.name.toLowerCase().includes('locations') && <MapPin className="w-4 h-4 text-gray-600" />}
-            {group.name.toLowerCase().includes('maintenance') && <Wrench className="w-4 h-4 text-gray-600" />}
-            {group.name.toLowerCase().includes('notes') && <FileText className="w-4 h-4 text-gray-600" />}
-            {group.name.toLowerCase().includes('preferences') && <Palette className="w-4 h-4 text-gray-600" />}
-            {group.name.toLowerCase().includes('reports') && <BarChart3 className="w-4 h-4 text-gray-600" />}
-                                                    {!group.name.toLowerCase().includes('users') && 
-             !group.name.toLowerCase().includes('roles') &&
-             !group.name.toLowerCase().includes('companies') && 
-             !group.name.toLowerCase().includes('providers') &&
-             !group.name.toLowerCase().includes('trailers') && 
-             !group.name.toLowerCase().includes('locations') && 
-             !group.name.toLowerCase().includes('maintenance') && 
-             !group.name.toLowerCase().includes('notes') && 
-             !group.name.toLowerCase().includes('preferences') && 
-             !group.name.toLowerCase().includes('reports') && 
-             <Settings className="w-4 h-4 text-gray-600" />}
+                                        {getGroupIcon(group.name)}
                                       </div>
                                       <span className="text-sm">{group.name}</span>
                                     </td>
@@ -1202,8 +1196,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ users, onUserUpdate }) 
                             </table>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                    ),)}
                   </div>
                 </div>
               </div>
