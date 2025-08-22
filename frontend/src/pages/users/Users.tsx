@@ -76,7 +76,7 @@ const Users = () => {
 
       // Only load roles if user has roles_view permission
       if (permissionsResponse.data.data?.userPermissions?.includes('roles_view')) {
-        console.log('✅ User has roles_view permission');
+        // User has roles_view permission
         const rolesResponse = await userAPI.getRoles();
         if (rolesResponse.data.success) {
           const rolesData = rolesResponse.data.roles || [];
@@ -107,14 +107,14 @@ const Users = () => {
           setPermissionCategories(categories);
         }
       } else {
-        console.log('❌ User does NOT have roles_view permission');
+        // User does NOT have roles_view permission
         // User doesn't have roles_view permission
         setRoles([]);
         setPermissions([]);
         setPermissionCategories([]);
       }
     } catch (error: unknown) {
-      console.error('Error loading roles:', error);
+              // Error loading roles
       setRoles([]);
       setPermissions([]);
       setPermissionCategories([]);
@@ -127,19 +127,18 @@ const Users = () => {
       
       // Load user permissions first
       const permissionsResponse = await userAPI.getPermissions();
-      console.log('🔍 Users Page - Permissions Response:', permissionsResponse.data);
+              // Permissions response received
       let userPermissions = [];
       if (permissionsResponse.data.success) {
         userPermissions = permissionsResponse.data.data?.userPermissions || [];
         // Update the state with the permissions array
         setUserPermissions(userPermissions);
       }
-      console.log('🔍 Users Page - User Permissions:', userPermissions);
-      console.log('🔍 Users Page - User Role:', permissionsResponse.data.data?.userRole);
+              // User permissions and role loaded
       
       // Load companies only if user has companies_view permission
       if (userPermissions.includes('companies_view')) {
-        console.log('✅ User has companies_view permission');
+        // User has companies_view permission
         try {
           const companiesResponse = await companyAPI.getCompanies();
           if (companiesResponse.data.success) {
@@ -148,17 +147,17 @@ const Users = () => {
             setCompanies([]);
           }
         } catch (error: unknown) {
-          console.error('Error loading companies:', error);
+          // Error loading companies
           setCompanies([]);
         }
       } else {
-        console.log('❌ User does NOT have companies_view permission');
+        // User does NOT have companies_view permission
         setCompanies([]);
       }
 
       // Load users only if user has users_view permission
       if (userPermissions.includes('users_view')) {
-        console.log('✅ User has users_view permission');
+        // User has users_view permission
         try {
           const usersResponse = await userAPI.getUsers();
           if (usersResponse.data.success) {
@@ -168,18 +167,18 @@ const Users = () => {
             setUsers([]);
           }
         } catch (error: unknown) {
-          console.error('Error loading users:', error);
+          // Error loading users
           setUsers([]);
         }
       } else {
-        console.log('❌ User does NOT have users_view permission');
+        // User does NOT have users_view permission
         setUsers([]);
       }
 
       // Load roles and permissions (includes user permissions)
       await loadRolesData();
     } catch (error: unknown) {
-      console.error('Error loading users data:', error);
+              // Error loading users data
       toast({
         title: 'Error',
         description: 'Failed to load users data',
@@ -232,7 +231,7 @@ const Users = () => {
         });
       }
     } catch (error: unknown) {
-      console.error('Error creating user:', error);
+              // Error creating user
       toast({
         title: 'Error',
         description: 'Failed to create user',
@@ -265,7 +264,7 @@ const Users = () => {
         });
       }
     } catch (error: unknown) {
-      console.error('Error updating user:', error);
+              // Error updating user
       toast({
         title: 'Error',
         description: 'Failed to update user',
@@ -297,7 +296,7 @@ const Users = () => {
         });
       }
     } catch (error: unknown) {
-      console.error('Error deleting user:', error);
+              // Error deleting user
       toast({
         title: 'Error',
         description: 'Failed to delete user',
@@ -323,7 +322,7 @@ const Users = () => {
         });
       }
     } catch (error: unknown) {
-      console.error('Error activating user:', error);
+              // Error activating user
       toast({
         title: 'Error',
         description: 'Failed to activate user',
@@ -349,7 +348,7 @@ const Users = () => {
         });
       }
     } catch (error: unknown) {
-      console.error('Error deactivating user:', error);
+              // Error deactivating user
       toast({
         title: 'Error',
         description: 'Failed to deactivate user',
@@ -403,7 +402,7 @@ const Users = () => {
         });
       }
     } catch (error: unknown) {
-      console.error('Error updating role permissions:', error);
+              // Error updating role permissions
       toast({
         title: 'Error',
         description: 'Failed to update role permissions',
@@ -447,7 +446,7 @@ const Users = () => {
         });
       }
     } catch (error: unknown) {
-      console.error('Error creating custom role:', error);
+              // Error creating custom role
       toast({
         title: 'Error',
         description: 'Failed to create custom role',
@@ -480,7 +479,7 @@ const Users = () => {
         });
       }
     } catch (error: unknown) {
-      console.error('Error deleting custom role:', error);
+              // Error deleting custom role
       toast({
         title: 'Error',
         description: 'Failed to delete custom role',
@@ -662,6 +661,7 @@ const Users = () => {
             companies={companies}
             roles={roles}
             assignableRoles={assignableRoles}
+            userPermissions={userPermissions}
           />
         </div>
       </div>

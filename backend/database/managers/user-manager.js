@@ -22,6 +22,7 @@ const {
 } = require('../utils/db-helpers');
 const { USER_ROLES, VALIDATION_RULES, CACHE_KEYS } = require('../../utils/constants');
 const BaseManager = require('./baseManager');
+const { validateRoleCanBeModified, validateRoleCanBeDeleted, validateRoleCanBeCreated } = require('../../utils/role-constants');
 const { normalizePagination, buildPaginationClause, createPaginatedResponse, getDefaultPaginationForType } = require('../../utils/pagination');
 const cacheService = require('../../services/cache-service');
 
@@ -748,6 +749,9 @@ class UserManager extends BaseManager {
                 throw new Error('Role name and permissions are required');
             }
 
+            // Prevent modification of protected roles
+            validateRoleCanBeModified(roleName);
+
             const defaultTenantId = process.env.DEFAULT_TENANT_ID || 'default';
             const actualTenantId = tenantId || defaultTenantId;
 
@@ -775,6 +779,9 @@ class UserManager extends BaseManager {
                 throw new Error('Name, display name, and permissions are required');
             }
 
+            // Prevent creating a role with reserved names
+            validateRoleCanBeCreated(name);
+
             const defaultTenantId = process.env.DEFAULT_TENANT_ID || 'default';
             const actualTenantId = tenantId || defaultTenantId;
             const roleId = generateId();
@@ -799,6 +806,9 @@ class UserManager extends BaseManager {
             if (!roleName) {
                 throw new Error('Role name is required');
             }
+
+            // Prevent deletion of protected roles
+            validateRoleCanBeDeleted(roleName);
 
             const defaultTenantId = process.env.DEFAULT_TENANT_ID || 'default';
             const actualTenantId = tenantId || defaultTenantId;

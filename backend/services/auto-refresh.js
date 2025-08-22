@@ -45,7 +45,7 @@ class RefreshService {
             
             return result;
         } catch (error) {
-            console.error(`❌ Provider test error for ${provider.name}:`, error);
+            logger.error(`Provider test error for ${provider.name}:`, error);
             await gpsProviderManager.updateProviderStatus(providerId, 'disconnected', error.message, 0);
             throw error;
         }
@@ -109,7 +109,7 @@ class RefreshService {
                 };
             }
         } catch (error) {
-            console.error(`❌ Provider sync error for ${provider.name}:`, error);
+            logger.error(`Provider sync error for ${provider.name}:`, error);
             await gpsProviderManager.updateProviderStatus(providerId, 'disconnected', error.message, 0);
             throw error;
         }
@@ -125,8 +125,6 @@ class RefreshService {
      * @returns {Promise<Object>} Refresh result
      */
     static async refreshLocations(userId) {
-        console.log(`📍 Refreshing trailer locations for user: ${userId}`);
-        
         if (this.refreshInProgress.has(userId)) {
             return {
                 success: true,
@@ -140,7 +138,7 @@ class RefreshService {
             const user = await userManager.getUserProfile(userId);
             const companies = await cacheService.cached(
                 CACHE_KEYS.COMPANY_DATA,
-                () => companyManager.getUserCompanies(userId, user.tenantId, user.organization_role || 'user', { limit: 100 }),
+                () => companyManager.getUserCompanies(userId, user.tenantId, user.organization_role || 'user', null, { limit: 100 }),
                 user.tenantId
             );
             const allProviders = await cacheService.cached(
@@ -149,12 +147,10 @@ class RefreshService {
                 user.tenantId
             );
 
-            console.log(`📍 Location refresh: ${allProviders.data.length} providers across ${companies.data.length} companies`);
-
             // Trigger location-only refresh (non-blocking)
             this.updateTrailerLocations(userId, 'manual_refresh')
                 .catch(error => {
-                    console.error('Location refresh error:', error);
+                    logger.error('Location refresh error:', error);
                     sseService.notifyClient(userId, {
                         type: 'refresh_error',
                         error: error.message
@@ -170,7 +166,7 @@ class RefreshService {
                 }
             };
         } catch (error) {
-            console.error('Location refresh setup error:', error);
+            logger.error('Location refresh setup error:', error);
             throw error;
         }
     }
@@ -182,7 +178,6 @@ class RefreshService {
      */
     static async updateTrailerLocations(userId, triggerType) {
         if (this.refreshInProgress.has(userId)) {
-            console.log(`⏳ Location refresh already in progress for user: ${userId}`);
             return;
         }
 
@@ -195,8 +190,6 @@ class RefreshService {
                 message: `Starting ${triggerType} location refresh...`,
                 timestamp: new Date().toISOString()
             });
-
-            console.log(`📍 Starting location refresh for user: ${userId} (${triggerType})`);
 
             // Get user's providers
             const user = await userManager.getUserProfile(userId);
@@ -212,8 +205,6 @@ class RefreshService {
             // Update locations for each provider
             for (const provider of allProviders.data) {
                 try {
-                    console.log(`📍 Updating locations for provider: ${provider.name}`);
-                    
                     await new Promise(resolve => setTimeout(resolve, RATE_LIMITING.BETWEEN_PROVIDERS));
                     
                     // Fetch only location data (no trailer creation/updates)
@@ -227,17 +218,14 @@ class RefreshService {
                         
                         console.log(`✅ Updated ${updated} locations for ${locationData.length} trailers from ${provider.name}`);
                     } else {
-                        console.log(`⚠️ No location data found for provider: ${provider.name}`);
+                        logger.debug(`No location data found for provider: ${provider.name}`);
                     }
                 } catch (error) {
-                    console.error(`❌ Error updating locations for provider ${provider.name}:`, error);
+                    logger.error(`Error updating locations for provider ${provider.name}:`, error);
                 }
             }
 
             const duration = Date.now() - startTime;
-
-            // Log refresh activity (simplified - just console log)
-            console.log(`✅ Location refresh completed for user: ${userId} (${duration}ms) - Processed: ${totalTrailersUpdated}, Updated: ${totalLocationsUpdated}`);
 
             sseService.notifyClient(userId, {
                 type: 'refresh_complete',
@@ -251,10 +239,10 @@ class RefreshService {
             });
 
             this.lastRefreshTime.set(userId, new Date().toISOString());
-            console.log(`✅ Location refresh completed for user: ${userId} (${duration}ms)`);
+            logger.info(`Location refresh completed for user: ${userId}`, { duration, trailersProcessed: totalTrailersUpdated, locationsUpdated: totalLocationsUpdated });
 
         } catch (error) {
-            console.error(`❌ Location refresh error for user: ${userId}`, error);
+            logger.error(`Location refresh error for user: ${userId}`, error);
             
             sseService.notifyClient(userId, {
                 type: 'refresh_error',
@@ -274,14 +262,14 @@ class RefreshService {
      * Start the auto-refresh system (location updates every hour)
      */
     static startAutoRefreshSystem() {
-        console.log('🚀 Starting auto-refresh system (location updates every hour)...');
+        logger.info('Starting auto-refresh system (location updates every hour)');
         
         // Location updates every hour
         setInterval(async () => {
             try {
                 await this.runScheduledLocationUpdates();
             } catch (error) {
-                console.error('Scheduled location update error:', error);
+                logger.error('Scheduled location update error:', error);
             }
         }, 60 * 60 * 1000); // 1 hour
         
@@ -290,18 +278,18 @@ class RefreshService {
             try {
                 await this.runScheduledMaintenance();
             } catch (error) {
-                console.error('Scheduled maintenance error:', error);
+                logger.error('Scheduled maintenance error:', error);
             }
         }, 24 * 60 * 60 * 1000); // 24 hours
         
-        console.log('✅ Auto-refresh system started (locations: 1h, maintenance: 24h)');
+        logger.info('Auto-refresh system started (locations: 1h, maintenance: 24h)');
     }
 
     /**
      * Run scheduled location updates
      */
     static async runScheduledLocationUpdates() {
-        console.log('📍 Running scheduled location updates...');
+        logger.debug('Running scheduled location updates');
         
         const users = await userManager.getAllActiveUsers({ limit: 100 });
         const tenantGroups = this.groupUsersByTenant(users.data);
@@ -310,7 +298,7 @@ class RefreshService {
             try {
                 await this.processTenantLocationUpdates(tenantId, tenantUsers, 'scheduled_location_update');
             } catch (error) {
-                console.error(`Tenant location update error for ${tenantId}:`, error);
+                logger.error(`Tenant location update error for ${tenantId}:`, error);
             }
         }
     }
@@ -319,12 +307,12 @@ class RefreshService {
      * Process location updates for a tenant with rate limiting
      */
     static async processTenantLocationUpdates(tenantId, users, triggerType) {
-        console.log(`📍 Processing location updates for tenant ${tenantId} with ${users.length} users`);
+        logger.debug(`Processing location updates for tenant ${tenantId} with ${users.length} users`);
         
         for (const user of users) {
             try {
                 if (!rateLimiter.isAllowed(tenantId, 'location_update', 10, 60000)) {
-                    console.log(`⏳ Rate limit reached for tenant ${tenantId}, skipping user ${user.id}`);
+                    logger.debug(`Rate limit reached for tenant ${tenantId}, skipping user ${user.id}`);
                     continue;
                 }
                 
@@ -375,13 +363,11 @@ class RefreshService {
                 let existingTrailer = await trailerManager.getTrailerByDeviceId(trailer.id, providerCompanyId);
                 
                 if (!existingTrailer && trailer.vin) {
-                    console.log(`🔍 Trailer not found by GPS unit number ${trailer.id}, trying VIN: ${trailer.vin}`);
                     existingTrailer = await trailerManager.getTrailerByDeviceId(trailer.vin, providerCompanyId);
                 }
                 
                 // If still not found, try looking up by the unit number that would be created
                 if (!existingTrailer && trailer.unit_number) {
-                    console.log(`🔍 Trailer not found by VIN, trying unit_number: ${trailer.unit_number}`);
                     // Get the tenant ID from the provider company
                     const provider = await gpsProviderManager.getProviderById(providerCompanyId);
                     if (provider && provider.tenant_id) {
@@ -390,21 +376,17 @@ class RefreshService {
                 }
                 
                 if (existingTrailer) {
-                    console.log(`🔍 Updating existing trailer ${existingTrailer.id} with unit_number: ${trailer.unit_number}`);
                     await trailerManager.updateTrailer(existingTrailer.id, trailer);
                     
                     updated++;
                     processedTrailerIds.add(existingTrailer.id);
                 } else {
-                    console.log(`🔍 Creating new trailer ${trailer.id} with unit_number: ${trailer.unit_number}`);
-                    
                     // Before creating, double-check if a trailer with this unit number already exists
                     if (trailer.unit_number) {
                         const provider = await gpsProviderManager.getProviderById(providerCompanyId);
                         if (provider && provider.tenant_id) {
                             const duplicateCheck = await trailerManager.checkUnitNumberExistsInTenant(trailer.unit_number, provider.tenant_id);
                             if (duplicateCheck) {
-                                console.log(`⚠️ Found existing trailer with unit_number ${trailer.unit_number}, updating instead of creating`);
                                 await trailerManager.updateTrailer(duplicateCheck.id, trailer);
                                 
                                 updated++;
@@ -421,7 +403,7 @@ class RefreshService {
             } catch (error) {
                 // Handle unique constraint violations specifically
                 if (error.message && error.message.includes('UNIQUE constraint failed: persistent_trailers.tenant_id, unit_number')) {
-                    console.log(`⚠️ Unique constraint violation for unit_number: ${trailer.unit_number}, attempting to find and update existing trailer`);
+                    logger.debug(`Unique constraint violation for unit_number: ${trailer.unit_number}, attempting to find and update existing trailer`);
                     
                     try {
                         // Get the tenant ID from the provider company
@@ -430,20 +412,19 @@ class RefreshService {
                             // Try to find the existing trailer by unit number
                             const existingTrailer = await trailerManager.checkUnitNumberExistsInTenant(trailer.unit_number, provider.tenant_id);
                             if (existingTrailer) {
-                                console.log(`🔍 Found existing trailer ${existingTrailer.id} with unit_number ${trailer.unit_number}, updating instead`);
                                 await trailerManager.updateTrailer(existingTrailer.id, trailer);
                                 
                                 updated++;
                                 processedTrailerIds.add(existingTrailer.id);
                             } else {
-                                console.error(`❌ Could not find existing trailer with unit_number ${trailer.unit_number} despite constraint violation`);
+                                logger.error(`Could not find existing trailer with unit_number ${trailer.unit_number} despite constraint violation`);
                             }
                         }
                     } catch (updateError) {
-                        console.error(`❌ Error updating existing trailer after constraint violation:`, updateError);
+                        logger.error(`Error updating existing trailer after constraint violation:`, updateError);
                     }
                 } else {
-                    console.error(`❌ Error storing trailer ${trailer.id}:`, error);
+                    logger.error(`Error storing trailer ${trailer.id}:`, error);
                 }
             }
         }
@@ -454,7 +435,7 @@ class RefreshService {
                 try {
                     await trailerManager.markTrailerAsDisconnected(existingTrailer.id);
                 } catch (error) {
-                    console.error(`❌ Error marking trailer ${existingTrailer.id} as disconnected:`, error);
+                    logger.error(`Error marking trailer ${existingTrailer.id} as disconnected:`, error);
                 }
             }
         }
@@ -493,7 +474,7 @@ class RefreshService {
                     }
                 }
             } catch (error) {
-                console.error(`❌ Error updating location for trailer ${location.id}:`, error);
+                logger.error(`Error updating location for trailer ${location.id}:`, error);
             }
         }
 
@@ -504,7 +485,7 @@ class RefreshService {
      * Run scheduled maintenance updates
      */
     static async runScheduledMaintenance() {
-        console.log('🔧 Running scheduled maintenance updates...');
+        logger.debug('Running scheduled maintenance updates');
         
         const users = await userManager.getAllActiveUsers({ limit: 100 });
         const tenantGroups = this.groupUsersByTenant(users.data);
@@ -513,7 +494,7 @@ class RefreshService {
             try {
                 await this.processTenantMaintenance(tenantId, tenantUsers);
             } catch (error) {
-                console.error(`Tenant maintenance error for ${tenantId}:`, error);
+                logger.error(`Tenant maintenance error for ${tenantId}:`, error);
             }
         }
     }
@@ -522,12 +503,12 @@ class RefreshService {
      * Process maintenance for a tenant with rate limiting
      */
     static async processTenantMaintenance(tenantId, users) {
-        console.log(`🔧 Processing maintenance for tenant ${tenantId} with ${users.length} users`);
+        logger.debug(`Processing maintenance for tenant ${tenantId} with ${users.length} users`);
         
         for (const user of users) {
             try {
                 if (!rateLimiter.isAllowed(tenantId, 'maintenance', 10, 60000)) {
-                    console.log(`⏳ Rate limit reached for tenant ${tenantId}, skipping user ${user.id}`);
+                    logger.debug(`Rate limit reached for tenant ${tenantId}, skipping user ${user.id}`);
                     continue;
                 }
                 
@@ -540,7 +521,7 @@ class RefreshService {
                 
                 await new Promise(resolve => setTimeout(resolve, RATE_LIMITING.BETWEEN_USERS));
             } catch (error) {
-                console.error(`Tenant maintenance error for user ${user.id}:`, error.message);
+                logger.error(`Tenant maintenance error for user ${user.id}:`, error.message);
             }
         }
     }
@@ -550,12 +531,12 @@ class RefreshService {
      */
     static async updateMaintenanceAlerts(userId) {
         try {
-            console.log(`🔧 Updating maintenance alerts for user: ${userId}`);
+            logger.debug(`Updating maintenance alerts for user: ${userId}`);
             
             const user = await userManager.getUserProfile(userId);
             const companies = await cacheService.cached(
                 CACHE_KEYS.COMPANY_DATA,
-                () => companyManager.getUserCompanies(userId, user.tenantId, null, { limit: 100 }),
+                () => companyManager.getUserCompanies(userId, user.tenantId, null, null, { limit: 100 }),
                 user.tenantId
             );
             
@@ -569,17 +550,17 @@ class RefreshService {
                         try {
                             await maintenanceManager.checkAndCreateAlerts(trailer.id);
                         } catch (error) {
-                            console.error(`❌ Error checking maintenance for trailer ${trailer.id}:`, error);
+                            logger.error(`Error checking maintenance for trailer ${trailer.id}:`, error);
                         }
                     }
                 } catch (error) {
-                    console.error(`❌ Error updating maintenance for company ${company.id}:`, error);
+                    logger.error(`Error updating maintenance for company ${company.id}:`, error);
                 }
             }
             
-            console.log(`✅ Maintenance alerts updated for user: ${userId}`);
+            logger.debug(`Maintenance alerts updated for user: ${userId}`);
         } catch (error) {
-            console.error(`❌ Error updating maintenance alerts for user: ${userId}`, error);
+            logger.error(`Error updating maintenance alerts for user: ${userId}`, error);
         }
     }
 

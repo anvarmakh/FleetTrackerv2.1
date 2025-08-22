@@ -36,7 +36,7 @@ const ResetPassword = () => {
         setTokenValid(false);
       }
     } catch (error: unknown) {
-      console.error('Token validation error:', error);
+              // Token validation error
       setTokenValid(false);
       toast({
         title: "Invalid Reset Link",
@@ -101,7 +101,7 @@ const ResetPassword = () => {
         }, 2000);
       }
     } catch (error: unknown) {
-      console.error('Reset password error:', error);
+              // Reset password error
       const errorMessage = error instanceof Error ? error.message : 'Failed to reset password';
       toast({
         title: "Error",

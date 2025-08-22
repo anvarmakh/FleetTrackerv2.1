@@ -167,7 +167,7 @@ const LocationEditModal: React.FC<LocationEditModalProps> = ({
         throw new Error(response.data.error || 'Failed to update location');
       }
     } catch (error: unknown) {
-      console.error('Error updating location:', error);
+              // Error updating location
       const errorMessage = error instanceof Error ? error.message : 'Failed to update location';
       toast({
         title: "Error",
@@ -222,7 +222,7 @@ const LocationEditModal: React.FC<LocationEditModalProps> = ({
         throw new Error(response.data.error || 'Failed to update location');
       }
     } catch (error: unknown) {
-      console.error('Error updating custom location:', error);
+              // Error updating custom location
       const errorMessage = error instanceof Error ? error.message : 'Failed to update location';
       toast({
         title: "Error",
@@ -279,7 +279,7 @@ const LocationEditModal: React.FC<LocationEditModalProps> = ({
         });
       }
     } catch (error: unknown) {
-      console.error('Error geocoding address:', error);
+              // Error geocoding address
       const errorMessage = error instanceof Error ? error.message : 'Failed to geocode address';
       toast({
         title: "Geocoding Error",
@@ -335,7 +335,7 @@ const LocationEditModal: React.FC<LocationEditModalProps> = ({
         });
       }
     } catch (error: unknown) {
-      console.error('Error reverse geocoding:', error);
+              // Error reverse geocoding
       const errorMessage = error instanceof Error ? error.message : 'Failed to reverse geocode coordinates';
       toast({
         title: "Reverse Geocoding Error",

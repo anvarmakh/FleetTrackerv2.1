@@ -212,8 +212,8 @@ export const authAPI = {
   },
   forgotPassword: (email: string, tenantId?: string) =>
     api.post('/api/auth/forgot-password', { email, tenantId }),
-  validateResetToken: (token: string) =>
-    api.get('/api/auth/validate-reset-token', { params: { token } }),
+  // validateResetToken: (token: string) =>
+  //   api.get('/api/auth/validate-reset-token', { params: { token } }),
   resetPassword: (token: string, newPassword: string) =>
     api.post('/api/auth/reset-password', { token, newPassword }),
 };
@@ -221,7 +221,7 @@ export const authAPI = {
 export const userAPI = {
   getProfile: () => api.get<UserData>('/api/user/profile'),
   updateProfile: (data: Partial<UserData>) => api.put<UserData>('/api/user/profile', data),
-  changePassword: (data: { currentPassword: string; newPassword: string }) => api.post('/api/user/change-password', data),
+  changePassword: (userId: string, data: { currentPassword: string; newPassword: string }) => api.put(`/api/users/${userId}/password`, data),
   getUsers: () => api.get<UserData[]>('/api/users'),
   getUser: (userId: string) => api.get<UserData>(`/api/users/${userId}`),
   createUser: (userData: Omit<UserData, 'id' | 'createdAt' | 'updatedAt'>) => api.post<UserData>('/api/users', userData),
@@ -235,7 +235,7 @@ export const userAPI = {
   updateUserPermissions: (userId: string, permissions: { blockPermissions: string[], granularPermissions: string[] }) => 
     api.put(`/api/users/${userId}/permissions`, permissions),
   getRoles: () => api.get('/api/users/roles'),
-  createRole: (roleData: { displayName: string; description?: string; permissions: string[] }) => api.post('/api/users/roles', roleData),
+  createRole: (roleData: { name: string; displayName: string; description?: string; permissions: string[] }) => api.post('/api/users/roles', roleData),
   updateRole: (roleName: string, roleData: { displayName?: string; description?: string; permissions?: string[] }) => api.put(`/api/users/roles/${roleName}`, roleData),
   deleteRole: (roleName: string) => api.delete(`/api/users/roles/${roleName}`),
 };
@@ -253,12 +253,12 @@ export const companyAPI = {
 
 export const trailerAPI = {
   getTrailers: (params?: TrailerParams) => api.get<TrailerData[]>('/api/trailers', { params }),
-  getTrailer: (id: string) => api.get<TrailerData>(`/api/trailers/${id}`),
-  createTrailer: (data: Omit<TrailerData, 'id'>) => api.post<TrailerData>('/api/trailers', data),
-  updateTrailer: (id: string, data: Partial<TrailerData>) => api.put<TrailerData>(`/api/trailers/${id}`, data),
-  deleteTrailer: (id: string) => api.delete(`/api/trailers/${id}`),
+  getTrailer: (trailerId: string) => api.get<TrailerData>(`/api/trailers/${trailerId}`),
+  createTrailer: (data: Omit<TrailerData, 'id'>) => api.post<TrailerData>('/api/trailers/create', data),
+  updateTrailer: (trailerId: string, data: Partial<TrailerData>) => api.put<TrailerData>(`/api/trailers/${trailerId}`, data),
+  deleteTrailer: (trailerId: string) => api.delete(`/api/trailers/${trailerId}`),
   getStats: () => api.get('/api/stats'),
-  getMaintenance: (params?: MaintenanceParams) => api.get<MaintenanceInspectionData[]>('/api/trailers/maintenance', { params }),
+  getMaintenance: (params?: MaintenanceParams) => api.get<MaintenanceInspectionData[]>('/api/maintenance/inspections', { params }),
   updateLocation: (trailerId: string, locationData: any) => api.put(`/api/trailers/${trailerId}/location`, locationData),
 };
 
@@ -302,8 +302,8 @@ export const trailerCustomLocationAPI = {
 export const systemNotesAPI = {
   getNotes: (entityType: string, entityId: string) => api.get<NoteData[]>(`/api/notes/${entityType}/${entityId}`),
   createNote: (entityType: string, entityId: string, data: Omit<NoteData, 'id' | 'createdAt' | 'updatedAt'>) => api.post<NoteData>(`/api/notes/${entityType}/${entityId}`, data),
-  updateNote: (id: string, data: Partial<NoteData>) => api.put<NoteData>(`/api/notes/${id}`, data),
-  deleteNote: (id: string) => api.delete(`/api/notes/${id}`),
+  updateNote: (noteId: string, data: Partial<NoteData>) => api.put<NoteData>(`/api/notes/${noteId}`, data),
+  deleteNote: (noteId: string) => api.delete(`/api/notes/${noteId}`),
   getRecentNotes: (limit?: number, filters?: { entityType?: string; category?: string }) => api.get<NoteData[]>(`/api/notes/recent/${limit || 10}`, { params: filters }),
   getUserNotes: (userId: string, filters?: { entityType?: string; category?: string; limit?: number }) => api.get<NoteData[]>(`/api/notes/user/${userId}`, { params: filters }),
 };
@@ -311,7 +311,7 @@ export const systemNotesAPI = {
 export const trailerCustomCompaniesAPI = {
   getCustomCompanies: () => api.get<CompanyData[]>('/api/trailer-custom-companies'),
   createCustomCompany: (data: Omit<CompanyData, 'id' | 'createdAt' | 'updatedAt'>) => api.post<CompanyData>('/api/trailer-custom-companies', data),
-  updateCustomCompany: (id: string, data: Partial<CompanyData>) => api.put<CompanyData>(`/api/trailer-custom-companies/${id}`, data),
+  // updateCustomCompany: (id: string, data: Partial<CompanyData>) => api.put<CompanyData>(`/api/trailer-custom-companies/${id}`, data),
   deleteCustomCompany: (id: string) => api.delete(`/api/trailer-custom-companies/${id}`),
 };
 
@@ -345,13 +345,13 @@ export const adminAPI = {
   getOrphanedUsers: () => api.get<UserData[]>('/api/admin/orphaned-users'),
   getLogs: () => api.get('/api/admin/logs'),
   getHealth: () => api.get('/api/admin/health'),
-  getUsers: () => api.get<UserData[]>('/api/admin/users'),
+  getUsers: () => api.get<UserData[]>('/api/admin/all-users'),
   createUser: (data: { email: string; tenantId: string; organizationRole: string; firstName: string; lastName: string; password: string }) => api.post('/api/admin/users', data),
   deleteUser: (userId: string) => api.delete(`/api/admin/users/${userId}`),
   deactivateUser: (userId: string) => api.patch(`/api/admin/users/${userId}/deactivate`),
   activateUser: (userId: string) => api.patch(`/api/admin/users/${userId}/activate`),
 
-  cleanupOrphanedUsers: () => api.post('/api/admin/cleanup-orphaned-users'),
+  cleanupOrphanedUsers: () => api.delete('/api/admin/orphaned-users'),
   getPermissions: () => api.get<any>('/api/admin/permissions'),
   getUserPermissions: (userId: string) => api.get<any>(`/api/admin/users/${userId}/permissions`),
   updateUserPermissions: (userId: string, permissions: { blockPermissions: string[], granularPermissions: string[] }) => 

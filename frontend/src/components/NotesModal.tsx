@@ -61,7 +61,7 @@ export default function NotesModal({ isOpen, onClose, trailerId, trailerName, on
       const response = await systemNotesAPI.getNotes('trailer', trailerId);
       setNotes(response.data.data || []);
     } catch (error) {
-      console.error('Error loading notes:', error);
+              // Error loading notes
       toast.error('Failed to load notes');
     } finally {
       setLoading(false);
@@ -96,7 +96,7 @@ export default function NotesModal({ isOpen, onClose, trailerId, trailerName, on
       loadNotes();
       onNoteChange?.(); // Refresh recent notes in parent component
     } catch (error) {
-      console.error('Error saving note:', error);
+              // Error saving note
       toast.error(editingNote ? 'Failed to update note' : 'Failed to create note');
     }
   };
@@ -119,7 +119,7 @@ export default function NotesModal({ isOpen, onClose, trailerId, trailerName, on
       loadNotes();
       onNoteChange?.(); // Refresh recent notes in parent component
     } catch (error) {
-      console.error('Error deleting note:', error);
+              // Error deleting note
       toast.error('Failed to delete note');
     }
   };

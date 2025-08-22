@@ -15,6 +15,7 @@ const logger = require('../utils/logger');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/error-handling');
+const { validateRoleCanBeModified, validateRoleCanBeDeleted, validateRoleCanBeCreated, ROLE_PROTECTION_MESSAGES } = require('../utils/role-constants');
 
 const router = express.Router();
 
@@ -179,8 +180,10 @@ router.get('/permission-structure', authenticateToken, requirePermission('users_
         granularPermissions
       }
     });
+const logger = require('../utils/logger');
+
   } catch (error) {
-    console.error('Error getting permission structure:', error);
+    logger.error('Error getting permission structure:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get permission structure'
@@ -227,7 +230,7 @@ router.get('/:userId/permissions', authenticateToken, requirePermission('users_v
       }
     });
   } catch (error) {
-    console.error('Error getting user permissions:', error);
+    logger.error('Error getting user permissions:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get user permissions'
@@ -279,7 +282,7 @@ router.put('/:userId/permissions', authenticateToken, requirePermission('users_e
       });
     }
   } catch (error) {
-    console.error('Error updating user permissions:', error);
+    logger.error('Error updating user permissions:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to update user permissions'
@@ -298,7 +301,7 @@ router.get('/roles', authenticateToken, requirePermission('roles_view'), asyncHa
       roles: allRoles
     });
   } catch (error) {
-    console.error('Error getting roles:', error);
+    logger.error('Error getting roles:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get roles'
@@ -346,7 +349,7 @@ router.get('/:id', authenticateToken, requirePermission('users_view'), asyncHand
       user: user
     });
   } catch (error) {
-    console.error('Error getting user by ID:', error);
+    logger.error('Error getting user by ID:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get user'
@@ -388,9 +391,7 @@ router.post('/', authenticateToken, requirePermission('users_create'), asyncHand
     }
 
     // Hash password
-    console.log(`🔐 Hashing password for user: ${email}`);
     const hashedPassword = await encryptionUtil.hashPassword(password);
-    console.log(`✅ Password hashed successfully for user: ${email}`);
 
     // Determine tenant ID
     let targetTenantId = req.user.tenantId; // Default to current user's tenant
@@ -424,12 +425,12 @@ router.post('/', authenticateToken, requirePermission('users_create'), asyncHand
         // Assign user to the first company in the tenant
         assignedCompany = companies[0];
         await companyManager.assignUserToCompany(newUser.id, assignedCompany.id);
-        console.log(`✅ User ${newUser.id} assigned to company ${assignedCompany.name} (${assignedCompany.id})`);
+        logger.info(`User ${newUser.id} assigned to company ${assignedCompany.name} (${assignedCompany.id})`);
       } else {
-        console.warn(`⚠️ No companies found in tenant ${targetTenantId} for user assignment`);
+        logger.warn(`No companies found in tenant ${targetTenantId} for user assignment`);
       }
     } catch (error) {
-      console.error('❌ Could not assign user to company:', error.message);
+      logger.error('Could not assign user to company:', error.message);
     }
 
     if (newUser) {
@@ -454,8 +455,7 @@ router.post('/', authenticateToken, requirePermission('users_create'), asyncHand
       });
     }
   } catch (error) {
-    console.error('Error creating user:', error);
-    console.error('Error stack:', error.stack);
+    logger.error('Error creating user:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create user: ' + error.message
@@ -553,7 +553,7 @@ router.put('/:id', authenticateToken, requirePermission('users_edit'), asyncHand
       });
     }
   } catch (error) {
-    console.error('Error updating user:', error);
+    logger.error('Error updating user:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to update user'
@@ -616,7 +616,7 @@ router.delete('/:id', authenticateToken, requirePermission('users_delete'), asyn
       });
     }
   } catch (error) {
-    console.error('Error deleting user:', error);
+    logger.error('Error deleting user:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to delete user'
@@ -679,7 +679,7 @@ router.patch('/:id/deactivate', authenticateToken, requirePermission('users_edit
       });
     }
   } catch (error) {
-    console.error('Error deactivating user:', error);
+    logger.error('Error deactivating user:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to deactivate user'
@@ -734,7 +734,7 @@ router.patch('/:id/activate', authenticateToken, requirePermission('users_edit')
       });
     }
   } catch (error) {
-    console.error('Error activating user:', error);
+    logger.error('Error activating user:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to activate user'
@@ -752,6 +752,16 @@ router.put('/roles/:roleName', authenticateToken, requirePermission('roles_edit'
       return res.status(400).json({
         success: false,
         error: 'Permissions array is required'
+      });
+    }
+
+    // Prevent modification of protected roles
+    try {
+      validateRoleCanBeModified(roleName);
+    } catch (error) {
+      return res.status(403).json({
+        success: false,
+        error: error.message
       });
     }
 
@@ -780,7 +790,7 @@ router.put('/roles/:roleName', authenticateToken, requirePermission('roles_edit'
       message: 'Role permissions updated successfully'
     });
   } catch (error) {
-    console.error('Error updating role permissions:', error);
+    logger.error('Error updating role permissions:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to update role permissions'
@@ -797,6 +807,16 @@ router.post('/roles', authenticateToken, requirePermission('roles_create'), asyn
       return res.status(400).json({
         success: false,
         error: 'Name, display name, and permissions array are required'
+      });
+    }
+
+    // Prevent creating a role with reserved names
+    try {
+      validateRoleCanBeCreated(name);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message
       });
     }
 
@@ -818,7 +838,7 @@ router.post('/roles', authenticateToken, requirePermission('roles_create'), asyn
       message: 'Role created successfully'
     });
   } catch (error) {
-    console.error('Error creating role:', error);
+    logger.error('Error creating role:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create role'
@@ -830,6 +850,16 @@ router.post('/roles', authenticateToken, requirePermission('roles_create'), asyn
 router.delete('/roles/:roleName', authenticateToken, requirePermission('roles_delete'), asyncHandler(async (req, res) => {
   try {
     const { roleName } = req.params;
+
+    // Prevent deletion of protected roles
+    try {
+      validateRoleCanBeDeleted(roleName);
+    } catch (error) {
+      return res.status(403).json({
+        success: false,
+        error: error.message
+      });
+    }
 
     const allRoles = await getCachedRoles(req.user.tenantId);
     const roleExists = allRoles.some(role => role.name === roleName);
@@ -849,7 +879,7 @@ router.delete('/roles/:roleName', authenticateToken, requirePermission('roles_de
       message: 'Role deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting role:', error);
+    logger.error('Error deleting role:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to delete role'
@@ -929,7 +959,7 @@ router.put('/:id/password', authenticateToken, asyncHandler(async (req, res) => 
       message: 'Password updated successfully'
     });
   } catch (error) {
-    console.error('Error changing password:', error);
+    logger.error('Error changing password:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to change password'

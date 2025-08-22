@@ -86,8 +86,10 @@ function validateSecurityEnvironment() {
         }
     }
 
+const logger = require('./logger');
+
     // Log warnings
-    warnings.forEach(warning => console.warn('⚠️  Security Warning:', warning));
+    warnings.forEach(warning => logger.warn('⚠️  Security Warning:', warning));
     
     // Throw errors
     if (errors.length > 0) {

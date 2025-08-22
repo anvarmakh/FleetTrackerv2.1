@@ -13,7 +13,8 @@ import PreferencesSettings from './components/PreferencesSettings';
 import { 
   Company, 
   Provider, 
-  MaintenancePreferences
+  MaintenancePreferences,
+  UserPreferences
 } from '@/types';
 
 const Settings = () => {
@@ -21,85 +22,14 @@ const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // State for user permissions
+  // All state hooks must be called before any conditional returns
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
-
-  // Load user permissions
-  useEffect(() => {
-    const loadUserPermissions = async () => {
-      try {
-        setPermissionsLoading(true);
-        // This would typically come from your auth context or API
-        // For now, we'll use the role-based permissions
-        const rolePermissions: Record<string, string[]> = {
-          'superadmin': ['companies_view', 'providers_view', 'maintenance_settings_view', 'company_preferences_view'],
-          'owner': ['companies_view', 'providers_view', 'maintenance_settings_view', 'company_preferences_view'],
-          'admin': ['companies_view', 'providers_view', 'maintenance_settings_view', 'company_preferences_view'],
-          'manager': ['companies_view', 'providers_view'],
-          'user': [],
-        };
-        
-        const permissions = rolePermissions[user?.organizationRole || 'user'] || [];
-        setUserPermissions(permissions);
-      } catch (error) {
-        console.error('Error loading user permissions:', error);
-      } finally {
-        setPermissionsLoading(false);
-      }
-    };
-
-    loadUserPermissions();
-  }, [user?.organizationRole]);
-
-  // Check user permissions for UI feedback
-  const hasPermission = (permission: string) => {
-    return userPermissions.includes(permission);
-  };
-
-  const canViewCompanies = hasPermission('companies_view');
-  const canViewProviders = hasPermission('providers_view');
-  const canViewMaintenanceSettings = hasPermission('maintenance_settings_view');
-  const canViewCompanyPreferences = hasPermission('company_preferences_view');
-
-  // Check if user has access to any settings tab
-  const hasAnySettingsAccess = canViewCompanies || canViewProviders || canViewMaintenanceSettings || canViewCompanyPreferences;
-
-  if (!hasAnySettingsAccess) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="max-w-md mx-auto mt-20">
-          <div className="text-center">
-            <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-            <p className="text-muted-foreground mb-4">
-              You don't have permission to access any settings. Contact your administrator for access.
-            </p>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-            >
-              Go to Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  
-  // State
   const [companies, setCompanies] = useState<Company[]>([]);
   const [activeCompany, setActiveCompany] = useState<Company | null>(null);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('company');
-
-
-
   const [maintenancePreferences, setMaintenancePreferences] = useState<MaintenancePreferences>({
     annual_inspection_interval: 365,
     midtrip_inspection_interval: 7,
@@ -112,7 +42,24 @@ const Settings = () => {
     enable_push_notifications: true
   });
 
-  // Data Loading
+  const [userPreferences, setUserPreferences] = useState<UserPreferences>({
+    timezone: 'America/New_York',
+    language: 'en',
+    theme: 'system',
+    notifications: {
+      email: true,
+      push: true,
+      sms: false,
+    },
+    display: {
+      showTrailerCount: true,
+      showLastSync: true,
+      autoRefresh: true,
+      refreshInterval: 60,
+    },
+  });
+
+  // Data Loading - must be called before any conditional returns
   const loadSettingsData = useCallback(async () => {
     try {
       setLoading(true);
@@ -177,10 +124,80 @@ const Settings = () => {
     }
   }, [toast]);
 
+  // Load user permissions
+  useEffect(() => {
+    const loadUserPermissions = async () => {
+      try {
+        setPermissionsLoading(true);
+        // This would typically come from your auth context or API
+        // For now, we'll use the role-based permissions
+        const rolePermissions: Record<string, string[]> = {
+          'superadmin': ['companies_view', 'providers_view', 'maintenance_settings_view', 'company_preferences_view'],
+          'owner': ['companies_view', 'providers_view', 'maintenance_settings_view', 'company_preferences_view'],
+          'admin': ['companies_view', 'providers_view', 'maintenance_settings_view', 'company_preferences_view'],
+          'manager': ['companies_view', 'providers_view'],
+          'user': [],
+        };
+        
+        const permissions = rolePermissions[user?.organizationRole || 'user'] || [];
+        setUserPermissions(permissions);
+      } catch (error) {
+        console.error('Error loading user permissions:', error);
+      } finally {
+        setPermissionsLoading(false);
+      }
+    };
+
+    loadUserPermissions();
+  }, [user?.organizationRole]);
+
   // Effects
   useEffect(() => {
     loadSettingsData();
   }, [loadSettingsData]);
+
+  // Check user permissions for UI feedback
+  const hasPermission = (permission: string) => {
+    return userPermissions.includes(permission);
+  };
+
+  const canViewCompanies = hasPermission('companies_view');
+  const canViewProviders = hasPermission('providers_view');
+  const canViewMaintenanceSettings = hasPermission('maintenance_settings_view');
+  const canViewCompanyPreferences = hasPermission('company_preferences_view');
+
+  // Check if user has access to any settings tab
+  const hasAnySettingsAccess = canViewCompanies || canViewProviders || canViewMaintenanceSettings || canViewCompanyPreferences;
+
+  if (!hasAnySettingsAccess) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="max-w-md mx-auto mt-20">
+          <div className="text-center">
+            <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground mb-4">
+              You don't have permission to access any settings. Contact your administrator for access.
+            </p>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
+
+
 
   // Event Handlers
   const handleLogout = () => {
@@ -264,7 +281,8 @@ const Settings = () => {
       <TabsContent value="preferences">
         {canViewCompanyPreferences ? (
           <PreferencesSettings 
-            // Add preferences data and handlers here
+            preferences={userPreferences}
+            onPreferencesChange={setUserPreferences}
           />
         ) : (
           <div className="text-center py-12">

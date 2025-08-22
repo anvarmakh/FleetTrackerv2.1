@@ -16,7 +16,7 @@ const router = express.Router();
 router.get('/', authenticateToken, validateTenant, requirePermission('providers_view'), asyncHandler(async (req, res) => {
     try {       
         // Get all companies for the user
-        const companiesResponse = await companyManager.getUserCompanies(req.user.id, req.user.tenantId, null, { limit: 100 });
+        const companiesResponse = await companyManager.getUserCompanies(req.user.id, req.user.tenantId, null, req.userPermissions, { limit: 100 });
         const companies = companiesResponse.data || [];
         
         // If no companies exist, return empty providers list

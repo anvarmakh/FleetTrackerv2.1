@@ -59,10 +59,12 @@ class EncryptionUtil {
             
             // Return IV + encrypted data (IV needs to be stored with the encrypted data)
             return iv.toString('hex') + ':' + encrypted;
-        } catch (error) {
-            console.error('Encryption error:', error);
-            throw new Error('Failed to encrypt data');
-        }
+        const logger = require('./logger');
+
+    } catch (error) {
+        logger.error('Encryption error:', error);
+        throw new Error('Failed to encrypt data');
+    }
     }
 
     /**
@@ -90,10 +92,10 @@ class EncryptionUtil {
             decrypted += decipher.final('utf8');
             
             return decrypted;
-        } catch (error) {
-            console.error('Decryption error:', error);
-            throw new Error('Failed to decrypt data');
-        }
+            } catch (error) {
+        logger.error('Decryption error:', error);
+        throw new Error('Failed to decrypt data');
+    }
     }
 
     /**

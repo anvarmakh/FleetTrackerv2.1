@@ -10,6 +10,7 @@ const {
     buildWhereClause, buildOrderByClause, buildLimitClause
 } = require('../utils/db-helpers');
 const BaseManager = require('./baseManager');
+const PermissionsManager = require('./permissions-manager');
 
 class StatsManager extends BaseManager {
     constructor(db) {
@@ -112,7 +113,7 @@ class StatsManager extends BaseManager {
             }
             
             // Get all companies the user has access to (respects cross-company access permission)
-            const allCompanies = await this.companyManager.getUserCompanies(userId, user.tenantId, user.organizationRole || 'user', { limit: 100 });
+            const allCompanies = await this.companyManager.getUserCompanies(userId, user.tenantId, user.organizationRole || 'user', null, { limit: 100 });
             
             // Get custom companies
             const customCompanies = await this.customCompanyManager.getCustomCompaniesByTenant(user.tenantId);

@@ -10,6 +10,7 @@ const {
 } = require('../utils/db-helpers');
 const { COMPANY_TYPES, CACHE_KEYS } = require('../../utils/constants');
 const BaseManager = require('./baseManager');
+const PermissionsManager = require('./permissions-manager');
 const { normalizePagination, buildPaginationClause, createPaginatedResponse, getDefaultPaginationForType } = require('../../utils/pagination');
 const { normalizeTenantId } = require('../../utils/stringUtils');
 const cacheService = require('../../services/cache-service');
@@ -59,13 +60,14 @@ class CompanyManager extends BaseManager {
      * @param {string} userId - User ID
      * @param {string} tenantId - Tenant ID
      * @param {string} userRole - User role for access control
+     * @param {Array} userPermissions - User permissions array (optional)
      * @param {Object} pagination - Pagination options
      * @param {number} pagination.limit - Number of companies per page
      * @param {number} pagination.offset - Number of companies to skip
      * @param {number} pagination.page - Page number (alternative to offset)
      * @returns {Promise<Object>} Paginated response with companies and pagination metadata
      */
-    async getUserCompanies(userId, tenantId, userRole = null, pagination = {}) {
+    async getUserCompanies(userId, tenantId, userRole = null, userPermissions = null, pagination = {}) {
         const normalizedTenantId = normalizeTenantId(tenantId);
         try {
             if (!userId) {
@@ -80,12 +82,8 @@ class CompanyManager extends BaseManager {
             let dataQuery;
             let params;
 
-            // Check if user has cross-company access permission
-            let hasCrossCompanyAccess = false;
-            if (userRole && userRole.trim()) {
-                // Simple role check - owner and admin have cross-company access
-                hasCrossCompanyAccess = ['owner', 'admin'].includes(userRole.toLowerCase());
-            }
+            // Check if user has cross-company access permission using centralized method
+            const hasCrossCompanyAccess = PermissionsManager.hasCrossCompanyAccess(userPermissions, userRole);
 
             if (hasCrossCompanyAccess) {
                 // User can see all companies in the tenant

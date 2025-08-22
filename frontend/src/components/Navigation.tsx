@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, Truck, Settings, User, LogOut, ChevronDown, Shield, Users, Building } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import CompanySwitcher from './CompanySwitcher';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useState, useEffect } from 'react';
 import ProfileModal from './ProfileModal';
+import { userAPI } from '@/lib/api';
 
 const Navigation = () => {
   const location = useLocation();
@@ -21,6 +23,7 @@ const Navigation = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
   
   // Debug: Log the current user object
   // User loaded successfully
@@ -33,6 +36,28 @@ const Navigation = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Load user permissions
+  useEffect(() => {
+    const loadUserPermissions = async () => {
+      try {
+        const permissionsResponse = await userAPI.getPermissions();
+        if (permissionsResponse.data.success) {
+          const permissionsData = permissionsResponse.data.data;
+          if (permissionsData) {
+            const userPermsArray = permissionsData.userPermissions || [];
+            setUserPermissions(userPermsArray);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user permissions:', error);
+      }
+    };
+
+    if (user) {
+      loadUserPermissions();
+    }
+  }, [user]);
 
   // Smart sticky navigation - hide on scroll down, show on scroll up
   useEffect(() => {
@@ -222,6 +247,9 @@ const Navigation = () => {
             >
               Welcome back, {getUserName(user)}
             </span>
+            {/* CompanySwitcher temporarily hidden
+            <CompanySwitcher userPermissions={userPermissions} />
+            */}
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

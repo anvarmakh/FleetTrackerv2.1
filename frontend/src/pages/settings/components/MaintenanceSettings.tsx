@@ -63,7 +63,6 @@ const MaintenanceSettings: React.FC<MaintenanceSettingsProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>Maintenance Preferences</CardTitle>
-            <CardDescription>Configure maintenance intervals and alert settings</CardDescription>
           </div>
           <Button 
             size="sm"

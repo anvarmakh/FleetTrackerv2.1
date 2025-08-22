@@ -35,16 +35,14 @@ class EmailService {
         };
 
         // For development, log the email
-        console.log('\n📧 EMAIL SENT:');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log(`📨 To: ${emailData.to}`);
-        console.log(`📤 From: ${emailData.from}`);
-        console.log(`📋 Subject: ${emailData.subject}`);
-        console.log(`⏰ Time: ${emailData.timestamp}`);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('📄 HTML Content:');
-        console.log(emailData.html);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+const logger = require('../utils/logger');
+
+        logger.info('Email sent', {
+            to: emailData.to,
+            from: emailData.from,
+            subject: emailData.subject,
+            timestamp: emailData.timestamp
+        });
 
         // In production, you would integrate with a real email service here
         // Example with SendGrid:

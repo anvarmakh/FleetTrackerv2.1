@@ -107,8 +107,10 @@ async function createTrailerHandler(req, res) {
             message: 'Trailer created successfully'
         });
         
+const logger = require('../utils/logger');
+
     } catch (error) {
-        console.error('❌ Error creating trailer:', error);
+        logger.error('Error creating trailer:', error);
         
         // Handle specific constraint violation errors
         if (error.message && error.message.includes('UNIQUE constraint failed: persistent_trailers.tenant_id, unit_number')) {
@@ -129,130 +131,11 @@ async function createTrailerHandler(req, res) {
 // Create a new trailer
 router.post('/create', requirePermission('fleet_create'), createTrailerHandler);
 
-// Debug endpoint to check trailers by company ID
-router.get('/debug/by-company/:companyId', async (req, res) => {
-    try {
-        const { companyId } = req.params;
+// Debug endpoint removed for production
 
-        
-        const { trailerManager } = require('../database/database-manager');
-        
-        // Direct query to see trailers for specific company
-        const query = `
-            SELECT 
-                id, external_id, company_id, tenant_id, provider_id,
-                unit_number, status, gps_status, gps_enabled,
-                last_latitude, last_longitude, last_address,
-                last_gps_update, last_sync,
-                created_at, updated_at
-            FROM persistent_trailers 
-            WHERE company_id = ?
-            ORDER BY created_at DESC
-        `;
-        
-        const { executeQueryCamelCase } = require('../database/utils/db-helpers');
-        const rows = await executeQueryCamelCase(trailerManager.db, query, [companyId]);
-        
-        logger.debug('Debug: Trailers for company', { companyId, count: rows.length });
-        
-        res.json({
-            success: true,
-            companyId,
-            count: rows.length,
-            trailers: rows
-        });
-    } catch (error) {
-        console.error('❌ Debug endpoint error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
+// Debug endpoint removed for production
 
-// Debug endpoint to check all trailers in database
-router.get('/debug/all', async (req, res) => {
-    try {
-        logger.debug('Debug: Checking all trailers in database');
-        
-        const { trailerManager } = require('../database/database-manager');
-        
-        // Direct query to see all trailers
-        const query = `
-            SELECT 
-                id, external_id, company_id, tenant_id, provider_id,
-                unit_number, status, gps_status, gps_enabled,
-                last_latitude, last_longitude, last_address,
-                last_gps_update, last_sync,
-                created_at, updated_at
-            FROM persistent_trailers 
-            ORDER BY created_at DESC
-        `;
-        
-        const { executeQueryCamelCase } = require('../database/utils/db-helpers');
-        const rows = await executeQueryCamelCase(trailerManager.db, query, []);
-        
-        logger.debug('Debug: All trailers in database', { count: rows.length });
-        
-        res.json({
-            success: true,
-            count: rows.length,
-            trailers: rows
-        });
-    } catch (error) {
-        console.error('❌ Debug endpoint error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-
-// Debug endpoint to check trailers for current user's company
-router.get('/debug/current-company', authenticateToken, async (req, res) => {
-    try {
-            logger.debug('Debug: Checking trailers for current user company');
-    logger.debug('Debug: Current user data', {
-            id: req.user.id,
-            companyId: req.user.companyId,
-            tenantId: req.user.tenantId
-        });
-        
-        const { trailerManager } = require('../database/database-manager');
-        
-        // Direct query to see trailers for current user's company
-        const query = `
-            SELECT 
-                id, external_id, company_id, tenant_id, provider_id,
-                unit_number, status, gps_status, gps_enabled,
-                last_latitude, last_longitude, last_address,
-                last_gps_update, last_sync,
-                created_at, updated_at
-            FROM persistent_trailers 
-            WHERE company_id = ?
-            ORDER BY created_at DESC
-        `;
-        
-        const { executeQueryCamelCase } = require('../database/utils/db-helpers');
-        const rows = await executeQueryCamelCase(trailerManager.db, query, [req.user.companyId]);
-        
-        logger.debug('Debug: Trailers for current user company', { companyId: req.user.companyId, count: rows.length });
-        
-        res.json({
-            success: true,
-            userCompanyId: req.user.companyId,
-            userTenantId: req.user.tenantId,
-            count: rows.length,
-            trailers: rows
-        });
-    } catch (error) {
-        console.error('❌ Debug endpoint error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
+// Debug endpoint removed for production
 
 // Get all trailers for the authenticated user
 router.get('/', requirePermission('fleet_view'), asyncHandler(async (req, res) => {
@@ -441,7 +324,7 @@ router.get('/:trailerId', requirePermission('fleet_view'), async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Error fetching trailer:', error);
+        logger.error('Error fetching trailer:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to fetch trailer: ' + error.message 
@@ -508,12 +391,8 @@ router.put('/:trailerId', requirePermission('fleet_edit'), async (req, res) => {
             }
         }
         
-        // Debug: Log the incoming update data
-            logger.debug('Received trailer update data', { updateData });
-    logger.debug('Manual override fields', {
-            manualLocationOverride: updateData.manualLocationOverride,
-            manualLocationNotes: updateData.manualLocationNotes
-        });
+        // Log the incoming update data
+        logger.debug('Received trailer update data', { updateData });
         
         // Debug: Log address fields
         logger.debug('Address fields', {
@@ -644,9 +523,6 @@ router.delete('/:trailerId', requirePermission('fleet_delete'), async (req, res)
         }
         
         // Delete the trailer
-            logger.debug('Debug - Attempting to delete trailer', { trailerId });
-    logger.debug('Debug - Trailer data', { existingTrailer });
-        
         await trailerManager.deleteTrailer(trailerId);
         
         logger.info('Deleted trailer', { trailerId });
@@ -657,7 +533,7 @@ router.delete('/:trailerId', requirePermission('fleet_delete'), async (req, res)
         });
         
     } catch (error) {
-        console.error('❌ Error deleting trailer:', error);
+        logger.error('Error deleting trailer:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to delete trailer: ' + error.message 
@@ -725,7 +601,7 @@ router.get('/:trailerId/location-history', requirePermission('fleet_view'), asyn
         });
         
     } catch (error) {
-        console.error('❌ Error fetching trailer location history:', error);
+        logger.error('Error fetching trailer location history:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to fetch location history: ' + error.message 
@@ -808,7 +684,7 @@ router.put('/:trailerId/location', requirePermission('fleet_edit'), async (req, 
         });
         
     } catch (error) {
-        console.error('❌ Error updating trailer location:', error);
+        logger.error('Error updating trailer location:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to update trailer location: ' + error.message 

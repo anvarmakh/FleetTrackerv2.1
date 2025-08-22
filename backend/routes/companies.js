@@ -19,7 +19,7 @@ router.get('/filter', authenticateToken, validateTenant, asyncHandler(async (req
             });
         }
 
-        const companiesResponse = await companyManager.getUserCompanies(req.user.id, req.user.tenantId, req.user.organizationRole || 'user', { limit: 100 });
+        const companiesResponse = await companyManager.getUserCompanies(req.user.id, req.user.tenantId, req.user.organizationRole || 'user', req.userPermissions, { limit: 100 });
         res.json({ 
             success: true,
             companies: companiesResponse.data || []
@@ -45,7 +45,7 @@ router.get('/', authenticateToken, validateTenant, requirePermission('companies_
             });
         }
 
-        const companiesResponse = await companyManager.getUserCompanies(req.user.id, req.user.tenantId, req.user.organizationRole || 'user', { limit: 100 });
+        const companiesResponse = await companyManager.getUserCompanies(req.user.id, req.user.tenantId, req.user.organizationRole || 'user', req.userPermissions, { limit: 100 });
         res.json({ 
             success: true,
             companies: companiesResponse.data || []
@@ -108,7 +108,7 @@ router.put('/:id', authenticateToken, validateTenant, requirePermission('compani
 
         
         
-        const company = await companyManager.verifyCompanyOwnership(id, req.user.id, req.user.tenantId);
+        const company = await companyManager.verifyCompanyOwnership(id, req.user.id, req.user.tenantId, req.user.organizationRole);
         if (!company) {
             return res.status(404).json({
                 success: false,
@@ -146,7 +146,7 @@ router.delete('/:id', authenticateToken, validateTenant, requirePermission('org_
         const { id } = req.params;
 
         
-        const company = await companyManager.verifyCompanyOwnership(id, req.user.id, req.user.tenantId);
+        const company = await companyManager.verifyCompanyOwnership(id, req.user.id, req.user.tenantId, req.user.organizationRole);
         if (!company) {
             return res.status(404).json({
                 success: false,
@@ -196,7 +196,7 @@ router.post('/:id/activate', authenticateToken, validateTenant, asyncHandler(asy
         const { id } = req.params;
         
         
-        const company = await companyManager.verifyCompanyOwnership(id, req.user.id, req.user.tenantId);
+        const company = await companyManager.verifyCompanyOwnership(id, req.user.id, req.user.tenantId, req.user.organizationRole);
         if (!company) {
             return res.status(404).json({
                 success: false,

@@ -75,7 +75,7 @@ const USER_ROLES = {
 const ROLE_HIERARCHY = {
     'systemAdmin': ['systemAdmin', 'owner', 'admin', 'manager', 'user', 'viewer'],  // System admin can assign any role
     'owner': ['owner', 'admin', 'manager', 'user', 'viewer'],                       // Owner can assign org roles
-    'admin': ['admin', 'manager', 'user', 'viewer'],                                // Admin can assign lower roles
+    'admin': ['manager', 'user', 'viewer'],                                         // Admin can assign lower roles (NOT admin)
     'manager': ['manager', 'user', 'viewer'],                                       // Manager can assign user role
     'user': ['user', 'viewer'],                                                     // User can assign viewer role
     'viewer': ['viewer']                                                            // Viewer can't assign roles

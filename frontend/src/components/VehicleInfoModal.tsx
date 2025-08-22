@@ -121,7 +121,7 @@ const VehicleInfoModal: React.FC<VehicleInfoModalProps> = ({
           setMaintenancePreferences(response.data.data);
         }
       } catch (error) {
-        console.error('Error loading maintenance preferences:', error);
+        // Error loading maintenance preferences
         // Set default preferences if loading fails
         setMaintenancePreferences({
           annual_alert_threshold: 30,

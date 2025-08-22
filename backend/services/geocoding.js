@@ -13,12 +13,14 @@ class GeocodingService {
      */
     async geocodeAddress(address) {
         try {
-            // Check if API key is available
-            if (!this.apiKey) {
-                // Fallback: return a default location or throw a more helpful error
-                console.warn('Google Maps API key not configured. Using fallback geocoding.');
-                return this.fallbackGeocode(address);
-            }
+            const logger = require('../utils/logger');
+
+        // Check if API key is available
+        if (!this.apiKey) {
+            // Fallback: return a default location or throw a more helpful error
+            logger.warn('Google Maps API key not configured. Using fallback geocoding.');
+            return this.fallbackGeocode(address);
+        }
 
             const response = await axios.get(this.baseUrl, {
                 params: {
@@ -47,7 +49,7 @@ class GeocodingService {
                 throw new Error(`Geocoding failed: ${response.data.status}`);
             }
         } catch (error) {
-            console.error('Geocoding error:', error.message);
+            logger.error('Geocoding error:', error.message);
             if (error.response) {
                 throw new Error(`Google Maps API error: ${error.response.status} - ${error.response.statusText}`);
             }
@@ -63,7 +65,7 @@ class GeocodingService {
     fallbackGeocode(address) {
         // Simple fallback that returns a default location
         // In a real implementation, you might use a different geocoding service
-        console.log(`Fallback geocoding for address: ${address}`);
+        logger.debug(`Fallback geocoding for address: ${address}`);
         
         // Try to extract some basic location info from the address
         const addressLower = address.toLowerCase(); 
@@ -85,12 +87,12 @@ class GeocodingService {
      */
     async reverseGeocode(lat, lng) {
         try {
-            // Check if API key is available
-            if (!this.apiKey) {
-                // Fallback: return a default address
-                console.warn('Google Maps API key not configured. Using fallback reverse geocoding.');
-                return this.fallbackReverseGeocode(lat, lng);
-            }
+                    // Check if API key is available
+        if (!this.apiKey) {
+            // Fallback: return a default address
+            logger.warn('Google Maps API key not configured. Using fallback reverse geocoding.');
+            return this.fallbackReverseGeocode(lat, lng);
+        }
 
             const response = await axios.get(this.baseUrl, {
                 params: {
@@ -117,7 +119,7 @@ class GeocodingService {
                 throw new Error(`Reverse geocoding failed: ${response.data.status}`);
             }
         } catch (error) {
-            console.error('Reverse geocoding error:', error.message);
+            logger.error('Reverse geocoding error:', error.message);
             if (error.response) {
                 throw new Error(`Google Maps API error: ${error.response.status} - ${error.response.statusText}`);
             }
@@ -132,7 +134,7 @@ class GeocodingService {
      * @returns {Object} - Object with formatted_address
      */
     fallbackReverseGeocode(lat, lng) {
-        console.log(`Fallback reverse geocoding for coordinates: ${lat}, ${lng}`);
+        logger.debug(`Fallback reverse geocoding for coordinates: ${lat}, ${lng}`);
         
         return {
             formatted_address: `Location at ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
@@ -184,7 +186,7 @@ class GeocodingService {
                 return result.formatted_address;
             }
         } catch (error) {
-            console.error('Error getting simple address:', error);
+            logger.error('Error getting simple address:', error);
             return 'Unknown location';
         }
     }

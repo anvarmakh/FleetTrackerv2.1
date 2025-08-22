@@ -204,8 +204,10 @@ function sanitizeHTML(content) {
  * 
  * @deprecated Use parameterized queries instead
  */
+const logger = require('./logger');
+
 function sanitizeSQL(input) {
-    console.warn('DEPRECATED: sanitizeSQL is deprecated. Use parameterized queries instead.');
+    logger.warn('DEPRECATED: sanitizeSQL is deprecated. Use parameterized queries instead.');
     return input;
 }
 

@@ -42,6 +42,7 @@ interface UserModalsProps {
   companies: Company[];
   roles: Role[];
   assignableRoles: string[];
+  userPermissions: string[];
 }
 
 const UserModals: React.FC<UserModalsProps> = ({
@@ -68,7 +69,8 @@ const UserModals: React.FC<UserModalsProps> = ({
   permissionCategories,
   companies,
   roles,
-  assignableRoles
+  assignableRoles,
+  userPermissions
 }) => {
   const formatPermissionName = (permission: string) => {
     return permission
@@ -160,7 +162,19 @@ const UserModals: React.FC<UserModalsProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   {roles
-                    .filter(role => assignableRoles && assignableRoles.includes(role.name))
+                    .filter(role => {
+                      // Basic assignable roles check
+                      if (!assignableRoles || !assignableRoles.includes(role.name)) {
+                        return false;
+                      }
+                      
+                      // Special check for admin role - requires roles_assign_admin permission
+                      if (role.name === 'admin') {
+                        return userPermissions && userPermissions.includes('roles_assign_admin');
+                      }
+                      
+                      return true;
+                    })
                     .map((role) => (
                       <SelectItem key={role.name} value={role.name}>
                         {role.displayName}
@@ -385,7 +399,19 @@ const UserModals: React.FC<UserModalsProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     {roles
-                      .filter(role => assignableRoles && assignableRoles.includes(role.name))
+                      .filter(role => {
+                        // Basic assignable roles check
+                        if (!assignableRoles || !assignableRoles.includes(role.name)) {
+                          return false;
+                        }
+                        
+                        // Special check for admin role - requires roles_assign_admin permission
+                        if (role.name === 'admin') {
+                          return userPermissions && userPermissions.includes('roles_assign_admin');
+                        }
+                        
+                        return true;
+                      })
                       .map((role) => (
                         <SelectItem key={role.name} value={role.name}>
                           {role.displayName}
