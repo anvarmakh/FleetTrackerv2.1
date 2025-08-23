@@ -42,6 +42,9 @@ const logger = require('./utils/logger');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy for Railway deployment (fixes rate limiting)
+app.set('trust proxy', 1);
+
 // Security headers middleware
 app.use((req, res, next) => {
     // Prevent information disclosure
