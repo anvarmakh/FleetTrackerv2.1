@@ -75,6 +75,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const user = response.data.user;
             if (user) {
               localStorage.setItem('userData', JSON.stringify(user));
+              
+              // Save user timezone to localStorage for easy access in components
+              if (user.timezone) {
+                localStorage.setItem('userTimezone', user.timezone);
+              }
+              
               setUser(user);
             } else {
                           // Clear invalid data
@@ -117,6 +123,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('authToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
     localStorage.setItem('userData', JSON.stringify(user));
+    
+    // Save user timezone to localStorage for easy access in components
+    if (user.timezone) {
+      localStorage.setItem('userTimezone', user.timezone);
+    }
+    
     setUser(user);
   };
 
@@ -132,6 +144,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('authToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
     localStorage.setItem('userData', JSON.stringify(user));
+    
+    // Save user timezone to localStorage for easy access in components
+    if (user.timezone) {
+      localStorage.setItem('userTimezone', user.timezone);
+    }
+    
     setUser(user);
   };
 
@@ -147,6 +165,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('authToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('userData');
+      localStorage.removeItem('userTimezone');
       setUser(null);
     }
   };
@@ -154,6 +173,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateUser = (userData: User) => {
     setUser(userData);
     localStorage.setItem('userData', JSON.stringify(userData));
+    
+    // Save user timezone to localStorage for easy access in components
+    if (userData.timezone) {
+      localStorage.setItem('userTimezone', userData.timezone);
+    }
   };
 
   const value = {

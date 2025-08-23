@@ -3,8 +3,33 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, FileText, CheckCircle, AlertTriangle, Clock, MapPin, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { formatRelativeTimeInTimezone } from '@/lib/utils';
 
 import { Trailer, RecentNote } from '../types';
+
+// Helper function to format addresses consistently
+const formatAddress = (address: string | null | undefined): string => {
+  if (!address || address.trim() === '') {
+    return 'No location';
+  }
+  
+  // Check if address is a JSON string and parse it
+  if (address.startsWith('{') && address.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(address);
+      if (parsed.city && parsed.state) {
+        return `${parsed.city}, ${parsed.state}`;
+      }
+      if (parsed.street && parsed.city && parsed.state) {
+        return `${parsed.street}, ${parsed.city}, ${parsed.state}`;
+      }
+    } catch (e) {
+      // If parsing fails, return the original address
+    }
+  }
+  
+  return address;
+};
 
 // Category colors matching NotesModal
 const categoryColors = {
@@ -102,68 +127,12 @@ const TrailerTable: React.FC<TrailerTableProps> = ({
     );
   };
 
-  const getGpsStatusBadge = (gpsStatus: string | null | undefined) => {
-    const gpsConfig = {
-      connected: {
-        icon: <CheckCircle className="h-4 w-4" />,
-        className: 'text-green-600 dark:text-green-400'
-      },
-      disconnected: {
-        icon: <AlertTriangle className="h-4 w-4" />,
-        className: 'text-red-600 dark:text-red-400'
-      },
-      active: {
-        icon: <CheckCircle className="h-4 w-4" />,
-        className: 'text-green-600 dark:text-green-400'
-      },
-      stopped: {
-        icon: <CheckCircle className="h-4 w-4" />,
-        className: 'text-green-600 dark:text-green-400'
-      },
-      available: {
-        icon: <CheckCircle className="h-4 w-4" />,
-        className: 'text-green-600 dark:text-green-400'
-      },
-      unknown: {
-        icon: <Clock className="h-4 w-4" />,
-        className: 'text-gray-600 dark:text-gray-400'
-      }
-    };
 
-    // Handle null/undefined gpsStatus
-    if (!gpsStatus) {
-      return (
-        <div className="flex items-center justify-center text-gray-600 dark:text-gray-400">
-          <Clock className="h-4 w-4" />
-        </div>
-      );
-    }
-
-    // Map stopped and active to available
-    const normalizedStatus = gpsStatus.toLowerCase();
-    const displayStatus = normalizedStatus === 'stopped' || normalizedStatus === 'active' ? 'available' : normalizedStatus;
-
-    const config = gpsConfig[displayStatus as keyof typeof gpsConfig] || {
-      icon: <Clock className="h-4 w-4" />,
-      className: 'text-muted-foreground'
-    };
-
-    return (
-      <div className={`flex items-center justify-center ${config.className}`}>
-        {config.icon}
-      </div>
-    );
-  };
 
   const formatLastSync = (lastSync?: string) => {
-    if (!lastSync) return 'Never';
-    const date = new Date(lastSync);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
-    if (diffInHours < 1) return '< 1h ago';
-    if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
-    return `${Math.floor(diffInHours / 24)}d ago`;
+    // Get user timezone from localStorage or use default
+    const userTimezone = localStorage.getItem('userTimezone') || 'America/Chicago';
+    return formatRelativeTimeInTimezone(lastSync, userTimezone, false); // Don't show timezone indicator for relative time
   };
 
   const getMaintenanceSummary = (trailer: Trailer) => {
@@ -321,7 +290,6 @@ const TrailerTable: React.FC<TrailerTableProps> = ({
             </div>
           </TableHead>
           <TableHead className="w-[100px] text-center">Status</TableHead>
-          <TableHead className="w-[80px] text-center">GPS</TableHead>
           <TableHead className="w-[200px]">Location</TableHead>
           <TableHead className="w-[120px]">Company</TableHead>
           {showLastSyncColumn && (
@@ -372,14 +340,9 @@ const TrailerTable: React.FC<TrailerTableProps> = ({
                 {getStatusBadge(trailer.status)}
               </div>
             </TableCell>
-            <TableCell className="text-center w-[80px]">
-              <div className="flex justify-center">
-                {getGpsStatusBadge(trailer.gpsStatus)}
-              </div>
-            </TableCell>
             <TableCell className="w-[200px]">
-              <div className="truncate max-w-[180px]" title={trailer.lastAddress || 'No location'}>
-                {trailer.lastAddress || 'No location'}
+              <div className="truncate max-w-[180px]" title={formatAddress(trailer.lastAddress)}>
+                {formatAddress(trailer.lastAddress)}
               </div>
             </TableCell>
             <TableCell className="w-[120px]">

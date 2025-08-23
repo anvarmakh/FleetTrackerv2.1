@@ -72,12 +72,11 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ users, onUserUpdate }) 
     const currentRole = allRoles.find(role => role.name === selectedRole);
     if (currentRole) {
       return {
-        name: currentRole.displayName,
+        name: currentRole.name,
+        displayName: currentRole.displayName,
         description: currentRole.description,
-        blockPermissions: currentRole.permissions || [],
-        granularPermissions: [],
-        isCustom: currentRole.isCustom, // Preserve the isCustom property
-        displayName: currentRole.displayName
+        isCustom: currentRole.isCustom,
+        permissions: currentRole.permissions || []
       };
     }
     
@@ -86,8 +85,11 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ users, onUserUpdate }) 
     const template = permissionStructure.roleTemplates[selectedRole];
     if (template) {
       return {
-        ...template,
-        isCustom: false // System roles are not custom
+        name: selectedRole,
+        displayName: template.name,
+        description: template.description,
+        isCustom: false,
+        permissions: [...template.blockPermissions, ...template.granularPermissions]
       };
     }
     return null;
@@ -350,7 +352,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ users, onUserUpdate }) 
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Role List */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 h-full">
           <RoleList
             roles={getSortedRoles()}
             selectedRole={selectedRole}
@@ -363,31 +365,39 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ users, onUserUpdate }) 
         </div>
 
         {/* Role Details and Permissions */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2">
           {selectedRole ? (
             <>
-              <RoleDetails
-                selectedRole={getSelectedRoleTemplate()}
-                isEditing={isEditing}
-                onEditPermissions={() => setIsEditing(true)}
-                onCancelEdit={handleCancelEdit}
-                onSavePermissions={handleSavePermissions}
-                onDeleteRole={() => setShowDeleteDialog(true)}
-                canEditRoles={canEditRoles()}
-                canManageRoles={canManageRoles()}
-              />
+              <div className="mb-2">
+                <RoleDetails
+                  selectedRole={getSelectedRoleTemplate()}
+                  isEditing={isEditing}
+                  onEditPermissions={() => setIsEditing(true)}
+                  onCancelEdit={handleCancelEdit}
+                  onSavePermissions={handleSavePermissions}
+                  onDeleteRole={() => setShowDeleteDialog(true)}
+                  canEditRoles={canEditRoles()}
+                  canManageRoles={canManageRoles()}
+                />
+              </div>
               
-              <PermissionEditor
-                permissionStructure={permissionStructure}
-                editingPermissions={editingPermissions}
-                onPermissionToggle={handlePermissionToggle}
-                isEditing={isEditing}
-                allAvailablePermissions={allAvailablePermissions}
-              />
+              <div>
+                <PermissionEditor
+                  permissionStructure={permissionStructure}
+                  editingPermissions={editingPermissions}
+                  onPermissionToggle={handlePermissionToggle}
+                  onTablePermissionToggle={(category, action) => {
+                    const permission = `${category}_${action}`;
+                    handlePermissionToggle(permission);
+                  }}
+                  isEditing={isEditing}
+                  allAvailablePermissions={allAvailablePermissions}
+                />
+              </div>
             </>
           ) : (
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-6 flex items-center justify-center">
                 <div className="text-center text-gray-500">
                   Select a role to view and edit permissions
                 </div>

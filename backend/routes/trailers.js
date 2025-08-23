@@ -106,18 +106,16 @@ async function createTrailerHandler(req, res) {
             data: createdTrailer,
             message: 'Trailer created successfully'
         });
-        
-const logger = require('../utils/logger');
 
     } catch (error) {
         logger.error('Error creating trailer:', error);
         
         // Handle specific constraint violation errors
-        if (error.message && error.message.includes('UNIQUE constraint failed: persistent_trailers.tenant_id, unit_number')) {
+        if (error.message && error.message.includes('UNIQUE constraint failed: persistent_trailers.tenant_id, external_id')) {
             return res.status(400).json({
                 success: false,
-                error: 'A trailer with this unit number already exists in your fleet',
-                details: ['Please use a different unit number or update the existing trailer']
+                error: 'A trailer with this device ID already exists in your fleet',
+                details: ['This device is already registered. Please check your existing trailers or contact support if this is an error.']
             });
         }
         
@@ -456,11 +454,11 @@ router.put('/:trailerId', requirePermission('fleet_edit'), async (req, res) => {
         console.error('❌ Error updating trailer:', error);
         
         // Handle specific constraint violation errors
-        if (error.message && error.message.includes('UNIQUE constraint failed: persistent_trailers.tenant_id, unit_number')) {
+        if (error.message && error.message.includes('UNIQUE constraint failed: persistent_trailers.tenant_id, external_id')) {
             return res.status(400).json({
                 success: false,
-                error: 'A trailer with this unit number already exists in your fleet',
-                details: ['Please use a different unit number or update the existing trailer']
+                error: 'A trailer with this device ID already exists in your fleet',
+                details: ['This device is already registered. Please check your existing trailers or contact support if this is an error.']
             });
         }
         
@@ -615,6 +613,17 @@ router.put('/:trailerId/location', requirePermission('fleet_edit'), async (req, 
         const { trailerId } = req.params;
         const locationData = req.body;
         
+        logger.info('Location update request received', { 
+            trailerId, 
+            locationData: {
+                latitude: locationData.latitude,
+                longitude: locationData.longitude,
+                address: locationData.address,
+                hasManualOverride: !!locationData.manualLocationOverride,
+                manualNotes: locationData.manualLocationNotes
+            }
+        });
+        
         if (!trailerId) {
             return res.status(400).json({ 
                 success: false, 
@@ -649,6 +658,16 @@ router.put('/:trailerId/location', requirePermission('fleet_edit'), async (req, 
             });
         }
         
+        logger.info('Found trailer for location update', { 
+            trailerId, 
+            currentLocation: {
+                latitude: trailer.last_latitude,
+                longitude: trailer.last_longitude,
+                address: trailer.last_address,
+                source: trailer.location_source
+            }
+        });
+        
         // Check access permissions
         if (trailer.companyId && trailer.companyId.startsWith('trailer_custom_comp_')) {
             const customCompany = await trailerCustomCompanyManager.verifyCustomCompanyOwnership(trailer.companyId, user.tenantId);
@@ -669,13 +688,21 @@ router.put('/:trailerId/location', requirePermission('fleet_edit'), async (req, 
         }
         
         // Update trailer location
-        const updatedLocation = await trailerManager.applyLocationUpdate(trailerId, {
+        const updateData = {
             ...locationData,
             source: 'manual',
             occurredAtUTC: new Date().toISOString()
-        });
+        };
         
-        logger.info('Updated location for trailer', { trailerId });
+        logger.info('Applying location update', { trailerId, updateData });
+        
+        const updatedLocation = await trailerManager.applyLocationUpdate(trailerId, updateData);
+        
+        logger.info('Location update successful', { 
+            trailerId, 
+            changes: updatedLocation.changes,
+            message: updatedLocation.message
+        });
         
         res.json({
             success: true,

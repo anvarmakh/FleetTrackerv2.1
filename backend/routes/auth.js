@@ -416,7 +416,7 @@ router.post('/admin-login', adminLoginLimiter, async (req, res) => {
             lastName: 'SuperAdmin',
             tenantId: 'system',
             companyId: null,
-            organizationRole: 'superAdmin'
+            organizationRole: 'systemAdmin'
         };
         
         // Generate enhanced access token with fingerprinting

@@ -14,6 +14,7 @@ const { TRAILER_STATUS, GPS_STATUS, CACHE_KEYS } = require('../../utils/constant
 const BaseManager = require('./baseManager');
 const { normalizePagination, buildPaginationClause, createPaginatedResponse, getDefaultPaginationForType } = require('../../utils/pagination');
 const cacheService = require('../../services/cache-service');
+const logger = require('../../utils/logger');
 
 class TrailerManager extends BaseManager {
     constructor(db) {
@@ -292,7 +293,7 @@ class TrailerManager extends BaseManager {
     }
 
     /**
-     * Get trailer by device ID (GPS unit number or VIN)
+     * Get trailer by device ID (GPS unit number, VIN, or external_id)
      */
     async getTrailerByDeviceId(deviceId, companyId) {
         try {
@@ -305,10 +306,10 @@ class TrailerManager extends BaseManager {
 
             const query = `
                 SELECT * FROM persistent_trailers 
-                WHERE (unit_number = ? OR vin = ?) AND company_id = ?
+                WHERE (unit_number = ? OR vin = ? OR external_id = ?) AND company_id = ?
             `;
             
-            return await this.execute(query, [deviceId, deviceId, companyId], { camelCase: true, first: true });
+            return await this.execute(query, [deviceId, deviceId, deviceId, companyId], { camelCase: true, first: true });
         } catch (error) {
             console.error('❌ Error fetching trailer by device ID:', error);
             throw error;
@@ -397,18 +398,16 @@ class TrailerManager extends BaseManager {
                 throw new Error('Unit number, original ID, or device ID is required');
             }
 
-            // Debug logging for status values
-            console.log(`🔍 Creating trailer with status: "${trailerData.status}"`);
             const finalStatus = trailerData.status || TRAILER_STATUS.AVAILABLE;
-            console.log(`🔍 Final status: "${finalStatus}"`);
 
             // Use GPS store UNIT number (originalId from GPS data) or manual unit number
             const unitNumber = trailerData.originalId || trailerData.unit_number || trailerData.deviceId;
-            console.log(`🔍 Using unit number: ${unitNumber}`);
 
             const entityData = {
                 company_id: companyId,
                 tenant_id: trailerData.tenant_id,
+                external_id: trailerData.deviceId || trailerData.originalId || trailerData.id,
+                provider_id: trailerData.provider_id || null,
                 unit_number: unitNumber,
                 make: trailerData.make,
                 model: trailerData.model,
@@ -435,9 +434,20 @@ class TrailerManager extends BaseManager {
                 last_tire_service: trailerData.last_tire_service || null
             };
 
+            // Debug logging for address issues
+            if (trailerData.provider_id === 'Spireon') {
+                logger.debug('Creating Spireon trailer', {
+                    unitNumber,
+                    externalId: trailerData.deviceId || trailerData.originalId || trailerData.id,
+                    address: trailerData.address,
+                    lastAddress: trailerData.last_address,
+                    coordinates: `${trailerData.latitude}, ${trailerData.longitude}`
+                });
+            }
+
             const trailerId = await this.createEntity('persistent_trailers', entityData);
 
-            console.log(`✅ Trailer created successfully: ${trailerId}`);
+            logger.info(`Trailer created: ${trailerId}`);
             return { id: trailerId };
         } catch (error) {
             console.error('❌ Error creating trailer:', error);
@@ -469,8 +479,7 @@ class TrailerManager extends BaseManager {
                 throw new Error('Trailer ID is required');
             }
 
-            // Debug: Log the update data received
-            console.log('🔍 updateTrailerInfo received:', { trailerId, updateData });
+
 
             const allowedUpdates = {};
             const allowedFields = [
@@ -493,18 +502,7 @@ class TrailerManager extends BaseManager {
                 throw new Error('No valid fields to update');
             }
 
-            // Debug: Log the fields being updated
-            console.log('🔍 Fields to update:', allowedUpdates);
-            console.log('🔍 Maintenance fields in update:', {
-                last_annual_inspection: allowedUpdates.last_annual_inspection,
-                next_annual_inspection_due: allowedUpdates.next_annual_inspection_due,
-                last_midtrip_inspection: allowedUpdates.last_midtrip_inspection,
-                next_midtrip_inspection_due: allowedUpdates.next_midtrip_inspection_due,
-                last_brake_inspection: allowedUpdates.last_brake_inspection,
-                next_brake_inspection_due: allowedUpdates.next_brake_inspection_due,
-                tire_status: allowedUpdates.tire_status,
-                last_tire_service: allowedUpdates.last_tire_service
-            });
+
 
             const result = await this.updateEntity('persistent_trailers', trailerId, allowedUpdates);
             
@@ -641,7 +639,15 @@ class TrailerManager extends BaseManager {
             errors.push('VIN must be 17 characters long');
         }
 
-        // Check for duplicate unit number within tenant
+        // Check for duplicate device ID (external_id) within tenant - this is critical
+        if (trailerData.external_id && tenantId) {
+            const existingTrailer = await this.getTrailerByDeviceId(trailerData.external_id, trailerData.company_id);
+            if (existingTrailer && existingTrailer.id !== excludeTrailerId) {
+                errors.push(`A trailer with device ID "${trailerData.external_id}" already exists in your fleet`);
+            }
+        }
+
+        // Check for duplicate unit number within tenant - this is a warning, not an error
         if (trailerData.unit_number && tenantId) {
             const existingTrailer = await this.checkUnitNumberExistsInTenant(
                 trailerData.unit_number, 
@@ -650,7 +656,8 @@ class TrailerManager extends BaseManager {
             );
             
             if (existingTrailer) {
-                errors.push(`A trailer with unit number "${trailerData.unit_number}" already exists in your fleet`);
+                // This is a warning, not an error - unit numbers can be duplicated intentionally
+                console.warn(`Warning: A trailer with unit number "${trailerData.unit_number}" already exists in your fleet`);
             }
         }
 
@@ -762,58 +769,72 @@ class TrailerManager extends BaseManager {
      * @param {string} locationData.notes - Notes (for manual updates)
      * @returns {Promise<Object>} Update result
      */
-    async applyLocationUpdate(trailerId, locationData) {
+    async applyLocationUpdate(trailerId, { latitude, longitude, address, source = 'gps', occurredAtUTC, notes = null }) {
         try {
-            if (!trailerId) {
-                throw new Error('Trailer ID is required');
-            }
-
-            const { latitude, longitude, address, source, occurredAtUTC, notes } = locationData;
-            
-            // Validate source
-            if (!['gps', 'manual'].includes(source)) {
-                throw new Error('Invalid location source. Must be "gps" or "manual"');
-            }
-            
-            // Validate coordinates
-            if (latitude !== null && (latitude < -90 || latitude > 90)) {
-                throw new Error('Invalid latitude value. Must be between -90 and 90.');
-            }
-            
-            if (longitude !== null && (longitude < -180 || longitude > 180)) {
-                throw new Error('Invalid longitude value. Must be between -180 and 180.');
-            }
-
-            // Get current trailer data to check conflict resolution
+            // Get current trailer data
             const currentTrailer = await this.getTrailerById(trailerId);
             if (!currentTrailer) {
                 throw new Error('Trailer not found');
             }
 
-            // Conflict resolution logic
+            // 2. System caches locations and ignores if no update
+            // Check if coordinates have actually changed (coordinate caching)
+            const currentLat = parseFloat(currentTrailer.last_latitude) || 0;
+            const currentLng = parseFloat(currentTrailer.last_longitude) || 0;
+            const newLat = parseFloat(latitude) || 0;
+            const newLng = parseFloat(longitude) || 0;
+            
+            // Use precision of 5 decimal places (~1 meter accuracy)
+            const latChanged = Math.abs(currentLat - newLat) > 0.00001;
+            const lngChanged = Math.abs(currentLng - newLng) > 0.00001;
+            const coordinatesChanged = latChanged || lngChanged;
+            
+            // Check if update should proceed based on conflict resolution rules
             const shouldUpdate = this.shouldUpdateLocation(currentTrailer, source, occurredAtUTC);
             
             if (!shouldUpdate) {
-                console.log(`📍 Location update skipped for trailer ${trailerId}: ${source} update conflicts with existing ${currentTrailer.location_source} data`);
                 return { 
                     changes: 0,
-                    message: 'Location update skipped due to conflict resolution',
-                    skipped: true
+                    skipped: true,
+                    message: 'Location update skipped (conflict resolution)'
+                };
+            }
+            
+            // Skip if coordinates haven't changed (caching logic)
+            if (!coordinatesChanged && source === 'gps') {
+                return { 
+                    changes: 0,
+                    skipped: true,
+                    message: 'Location update skipped (coordinates unchanged)'
                 };
             }
 
-            // Auto-reverse geocode if we have coordinates but no address
+            // 3. Geocode updated coordinates (only if coordinates changed)
             let finalAddress = address;
-            if (latitude !== null && longitude !== null && (!address || address.trim() === '')) {
+            if (coordinatesChanged && latitude !== null && longitude !== null) {
                 try {
-                    const geocodingService = require('../../services/geocoding');
-                    const geocodeResult = await geocodingService.reverseGeocode(latitude, longitude);
-                    finalAddress = geocodeResult.formatted_address;
-                    console.log(`📍 Auto-reverse geocoded address for trailer ${trailerId}: ${finalAddress}`);
+                    // Validate coordinates before geocoding
+                    const latNum = parseFloat(latitude);
+                    const lngNum = parseFloat(longitude);
+                    
+                    if (!isNaN(latNum) && !isNaN(lngNum) && 
+                        latNum >= -90 && latNum <= 90 && 
+                        lngNum >= -180 && lngNum <= 180) {
+                        
+                        const geocodingService = require('../../services/geocoding');
+                        const geocodeResult = await geocodingService.getStandardizedAddress(latNum, lngNum);
+                        
+                        // 4. Send address in correct format - use Google's standardized format
+                        if (geocodeResult && geocodeResult !== 'Location unavailable') {
+                            finalAddress = geocodeResult;
+                        } else {
+                            finalAddress = address || 'Location unavailable';
+                        }
+                    } else {
+                        finalAddress = address || 'Location unavailable';
+                    }
                 } catch (geocodeError) {
-                    console.warn(`⚠️ Auto-reverse geocoding failed for trailer ${trailerId}:`, geocodeError.message);
-                    // Use fallback address
-                    finalAddress = `Location at ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                    finalAddress = address || 'Location unavailable';
                 }
             }
 
@@ -849,14 +870,11 @@ class TrailerManager extends BaseManager {
                 cacheService.delete(`${CACHE_KEYS.TRAILER_LIST}:${currentTrailer.companyId}`);
             }
             
-            console.log(`📍 Location updated for trailer ${trailerId}: ${source} source`);
-            
             return { 
                 changes: result.changes,
                 message: `Location updated successfully (${source} source)`
             };
         } catch (error) {
-            console.error('❌ Error applying location update:', error);
             throw error;
         }
     }

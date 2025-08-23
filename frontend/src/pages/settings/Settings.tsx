@@ -43,7 +43,7 @@ const Settings = () => {
   });
 
   const [userPreferences, setUserPreferences] = useState<UserPreferences>({
-    timezone: 'America/New_York',
+    timezone: 'America/Chicago',
     language: 'en',
     theme: 'system',
     notifications: {
@@ -132,7 +132,7 @@ const Settings = () => {
         // This would typically come from your auth context or API
         // For now, we'll use the role-based permissions
         const rolePermissions: Record<string, string[]> = {
-          'superadmin': ['companies_view', 'providers_view', 'maintenance_settings_view', 'company_preferences_view'],
+          'systemadmin': ['companies_view', 'providers_view', 'maintenance_settings_view', 'company_preferences_view'],
           'owner': ['companies_view', 'providers_view', 'maintenance_settings_view', 'company_preferences_view'],
           'admin': ['companies_view', 'providers_view', 'maintenance_settings_view', 'company_preferences_view'],
           'manager': ['companies_view', 'providers_view'],

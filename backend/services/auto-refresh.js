@@ -360,8 +360,19 @@ class RefreshService {
         for (const trailer of trailers) {
             try {
                 // Try multiple lookup strategies to find existing trailer
-                let existingTrailer = await trailerManager.getTrailerByDeviceId(trailer.id, providerCompanyId);
+                let existingTrailer = null;
                 
+                // First try by the new external_id format (skybitz_{mtsn})
+                if (trailer.id) {
+                    existingTrailer = await trailerManager.getTrailerByDeviceId(trailer.id, providerCompanyId);
+                }
+                
+                // If not found, try by originalId (unit number from GPS)
+                if (!existingTrailer && trailer.originalId) {
+                    existingTrailer = await trailerManager.getTrailerByDeviceId(trailer.originalId, providerCompanyId);
+                }
+                
+                // If not found, try by VIN
                 if (!existingTrailer && trailer.vin) {
                     existingTrailer = await trailerManager.getTrailerByDeviceId(trailer.vin, providerCompanyId);
                 }
@@ -402,23 +413,23 @@ class RefreshService {
                 }
             } catch (error) {
                 // Handle unique constraint violations specifically
-                if (error.message && error.message.includes('UNIQUE constraint failed: persistent_trailers.tenant_id, unit_number')) {
-                    logger.debug(`Unique constraint violation for unit_number: ${trailer.unit_number}, attempting to find and update existing trailer`);
+                if (error.message && error.message.includes('UNIQUE constraint failed: persistent_trailers.tenant_id, external_id')) {
+                    logger.debug(`Unique constraint violation for external_id: ${trailer.id}, attempting to find and update existing trailer`);
                     
                     try {
                         // Get the tenant ID from the provider company
                         const provider = await gpsProviderManager.getProviderById(providerCompanyId);
                         if (provider && provider.tenant_id) {
-                            // Try to find the existing trailer by unit number
-                            const existingTrailer = await trailerManager.checkUnitNumberExistsInTenant(trailer.unit_number, provider.tenant_id);
-                            if (existingTrailer) {
-                                await trailerManager.updateTrailer(existingTrailer.id, trailer);
-                                
-                                updated++;
-                                processedTrailerIds.add(existingTrailer.id);
-                            } else {
-                                logger.error(`Could not find existing trailer with unit_number ${trailer.unit_number} despite constraint violation`);
-                            }
+                                                    // Try to find the existing trailer by external ID
+                        const existingTrailer = await trailerManager.getTrailerByDeviceId(trailer.id, providerCompanyId);
+                        if (existingTrailer) {
+                            await trailerManager.updateTrailer(existingTrailer.id, trailer);
+                            
+                            updated++;
+                            processedTrailerIds.add(existingTrailer.id);
+                        } else {
+                            logger.error(`Could not find existing trailer with external_id ${trailer.id} despite constraint violation`);
+                        }
                         }
                     } catch (updateError) {
                         logger.error(`Error updating existing trailer after constraint violation:`, updateError);
@@ -451,10 +462,22 @@ class RefreshService {
 
         for (const location of locationData) {
             try {
-                let existingTrailer = await trailerManager.getTrailerByDeviceId(location.id, providerCompanyId);
+                // Try multiple lookup strategies
+                let existingTrailer = null;
                 
+                // First try by originalId (unit number from GPS)
+                if (location.originalId) {
+                    existingTrailer = await trailerManager.getTrailerByDeviceId(location.originalId, providerCompanyId);
+                }
+                
+                // Then try by VIN
                 if (!existingTrailer && location.vin) {
                     existingTrailer = await trailerManager.getTrailerByDeviceId(location.vin, providerCompanyId);
+                }
+                
+                // Finally try by the full ID (as fallback)
+                if (!existingTrailer) {
+                    existingTrailer = await trailerManager.getTrailerByDeviceId(location.id, providerCompanyId);
                 }
                 
                 if (existingTrailer) {

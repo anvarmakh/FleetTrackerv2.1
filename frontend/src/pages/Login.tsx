@@ -25,9 +25,9 @@ const Login = () => {
   // Component state loaded
   
   if (isAuthenticated) {
-    // Check if user is SuperAdmin and redirect accordingly
-    const isSuperAdmin = user?.organizationRole === 'superAdmin';
-    if (isSuperAdmin) {
+    // Check if user is SystemAdmin and redirect accordingly
+    const isSystemAdmin = user?.organizationRole === 'systemAdmin';
+    if (isSystemAdmin) {
       return <Navigate to="/admin" replace />;
     } else {
       return <Navigate to="/dashboard" replace />;
@@ -97,7 +97,6 @@ const Login = () => {
                 value={tenantId}
                 onChange={(e) => setTenantId(e.target.value)}
                 required
-                className="w-full dark:bg-input dark:border-border dark:text-foreground"
               />
             </div>
             <div className="space-y-2">
@@ -109,7 +108,6 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full dark:bg-input dark:border-border dark:text-foreground"
               />
             </div>
             <div className="space-y-2">
@@ -121,7 +119,6 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full dark:bg-input dark:border-border dark:text-foreground"
               />
             </div>
 

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { LoadingSpinnerInline } from '@/components/ui';
 import { Shield, AlertTriangle, Trash2 } from 'lucide-react';
 
 interface TripleConfirmationDialogProps {
@@ -142,15 +144,19 @@ const TripleConfirmationDialog: React.FC<TripleConfirmationDialogProps> = ({
 
           {/* Current step confirmation checkbox */}
           <div className="space-y-3">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id={`step-${confirmationStep}`}
                 checked={isCurrentStepConfirmed}
-                onChange={() => handleConfirmationChange(currentStepKey)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                onCheckedChange={() => handleConfirmationChange(currentStepKey)}
               />
-              <span className="text-sm font-medium">{stepContent.checkboxLabel}</span>
-            </label>
+              <label 
+                htmlFor={`step-${confirmationStep}`}
+                className="text-sm font-medium cursor-pointer"
+              >
+                {stepContent.checkboxLabel}
+              </label>
+            </div>
           </div>
         </div>
 
@@ -170,7 +176,7 @@ const TripleConfirmationDialog: React.FC<TripleConfirmationDialogProps> = ({
           >
             {isLoading ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <LoadingSpinnerInline size="sm" />
                 Deleting...
               </>
             ) : (

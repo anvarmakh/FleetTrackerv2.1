@@ -33,7 +33,7 @@ async function authenticateToken(req, res, next) {
         }
         
         // Allow system SuperAdmin token without DB lookup
-        if ((decoded.organizationRole === 'superAdmin' || decoded.systemRole === 'superAdmin') && decoded.id === 'admin_system') {
+        if ((decoded.organizationRole === 'systemAdmin' || decoded.systemRole === 'systemAdmin') && decoded.id === 'admin_system') {
             req.user = decoded;
             return next();
         }
@@ -117,7 +117,7 @@ function validateTenant(req, res, next) {
         });
     }
     // SuperAdmin bypasses tenant scoping
-    if (req.user.organizationRole === 'superAdmin') {
+    if (req.user.organizationRole === 'systemAdmin') {
         return next();
     }
     
@@ -200,10 +200,10 @@ function requireSuperAdmin(req, res, next) {
         });
     }
     
-    if (req.user.organizationRole !== 'superAdmin' && req.user.systemRole !== 'superAdmin') {
+    if (req.user.organizationRole !== 'systemAdmin' && req.user.systemRole !== 'systemAdmin') {
         return res.status(403).json({
             success: false,
-            error: 'SuperAdmin access required'
+            error: 'SystemAdmin access required'
         });
     }
     

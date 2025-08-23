@@ -46,6 +46,18 @@ export interface PermissionCategory {
   permissions: string[];
 }
 
+export interface PermissionCategoryWithCounts {
+  name: string;
+  description: string;
+  blocks: string[];
+  granular: {
+    name: string;
+    permissions: string[];
+  }[];
+  enabledCount: number;
+  totalCount: number;
+}
+
 export interface NewUser {
   email: string;
   firstName: string;

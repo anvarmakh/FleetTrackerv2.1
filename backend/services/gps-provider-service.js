@@ -36,9 +36,6 @@ class GPSProviderService {
      */
     async fetchGPSDataFromProvider(provider, providerCompanyId) {
         try {
-            console.log(`🔍 Fetching GPS data for provider: ${provider.name}`);
-            console.log(`🔍 Provider credentials_encrypted:`, provider.credentials_encrypted ? 'EXISTS' : 'NULL');
-            
             // Import centralized encryption utility
             const EncryptionUtil = require('../utils/encryption');
             const decryptedString = EncryptionUtil.decrypt(provider.credentials_encrypted);
@@ -49,7 +46,6 @@ class GPSProviderService {
                 console.error('Failed to parse decrypted credentials:', parseError);
                 throw new Error('Invalid credentials format');
             }
-            console.log(`🔍 Decrypted credentials:`, credentials);
             
             if (!credentials) {
                 console.error(`❌ Failed to decrypt credentials for provider: ${provider.name}`);

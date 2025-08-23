@@ -234,8 +234,8 @@ async function createDatabaseSchema(db) {
             is_active BOOLEAN DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
-            FOREIGN KEY (provider_id) REFERENCES gps_providers(id) ON DELETE SET NULL
+            FOREIGN KEY (provider_id) REFERENCES gps_providers(id) ON DELETE SET NULL,
+            UNIQUE(tenant_id, external_id)
         )`,
 
         // Trailer inspections table
@@ -431,7 +431,8 @@ async function createDatabaseSchema(db) {
         `CREATE INDEX IF NOT EXISTS idx_refresh_log_created_at ON system_refresh_log(created_at)`,
         `CREATE INDEX IF NOT EXISTS idx_trailer_inspections_trailer_id ON trailer_inspections(trailer_id)`,
         `CREATE INDEX IF NOT EXISTS idx_tire_records_trailer_id ON tire_records(trailer_id)`,
-        `CREATE INDEX IF NOT EXISTS idx_maintenance_alerts_trailer_id ON maintenance_alerts(trailer_id)`
+        `CREATE INDEX IF NOT EXISTS idx_maintenance_alerts_trailer_id ON maintenance_alerts(trailer_id)`,
+        `CREATE UNIQUE INDEX IF NOT EXISTS idx_persistent_trailers_tenant_external ON persistent_trailers(tenant_id, external_id) WHERE tenant_id IS NOT NULL AND external_id IS NOT NULL`
     ];
 
     try {

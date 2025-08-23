@@ -1,4 +1,5 @@
 import { PermissionStructure } from '../types';
+import { PermissionCategoryWithCounts } from '@/types';
 
 export const usePermissions = () => {
   // Helper function to get permission by category and action
@@ -144,11 +145,8 @@ export const usePermissions = () => {
     return permissionMap[permission] || 'Manage this feature';
   };
 
-  const getPermissionCategories = (permissionStructure: PermissionStructure | null, editingPermissions: string[], allAvailablePermissions: string[], isEditing: boolean) => {
+  const getPermissionCategories = (permissionStructure: PermissionStructure | null, editingPermissions: string[], allAvailablePermissions: string[], isEditing: boolean): PermissionCategoryWithCounts[] => {
     if (!permissionStructure) return [];
-    
-    // Use all available permissions when editing, otherwise use role template permissions
-    const permissionsToShow = isEditing ? allAvailablePermissions : editingPermissions;
     
     // Get the permission structure from the backend
     const { permissionStructure: structure } = permissionStructure;
@@ -158,7 +156,7 @@ export const usePermissions = () => {
     
     // Fleet Management
     if (structure.fleet) {
-      const fleetPermissions = permissionsToShow.filter(p => 
+      const fleetPermissions = editingPermissions.filter(p => 
         p.includes('fleet_') || 
         p.includes('trailers_') || 
         p.includes('locations_') || 
@@ -166,22 +164,33 @@ export const usePermissions = () => {
         p.includes('notes_')
       );
       
-      if (fleetPermissions.length > 0) {
+      // Get all available fleet permissions for total count
+      const allFleetPermissions = allAvailablePermissions.filter(p => 
+        p.includes('fleet_') || 
+        p.includes('trailers_') || 
+        p.includes('locations_') || 
+        p.includes('maintenance_') || 
+        p.includes('notes_')
+      );
+      
+      if (allFleetPermissions.length > 0) {
         categories.push({
           name: 'Fleet Management',
           description: 'Manage fleet operations, trailers, locations, maintenance, and notes',
-          blocks: structure.fleet.blocks.filter(block => permissionsToShow.includes(block)),
+          blocks: structure.fleet.blocks.filter(block => allAvailablePermissions.includes(block)),
           granular: Object.entries(structure.fleet.granular).map(([key, group]) => ({
             name: group.name,
-            permissions: group.permissions.filter(p => permissionsToShow.includes(p))
-          })).filter(group => group.permissions.length > 0)
+            permissions: group.permissions.filter(p => allAvailablePermissions.includes(p))
+          })).filter(group => group.permissions.length > 0),
+          enabledCount: fleetPermissions.length,
+          totalCount: allFleetPermissions.length
         });
       }
     }
     
     // Organization Management
     if (structure.organization) {
-      const orgPermissions = permissionsToShow.filter(p => 
+      const orgPermissions = editingPermissions.filter(p => 
         p.includes('users_') || 
         p.includes('companies_') || 
         p.includes('providers_') || 
@@ -190,54 +199,81 @@ export const usePermissions = () => {
         p.includes('org_')
       );
       
-      if (orgPermissions.length > 0) {
+      // Get all available org permissions for total count
+      const allOrgPermissions = allAvailablePermissions.filter(p => 
+        p.includes('users_') || 
+        p.includes('companies_') || 
+        p.includes('providers_') || 
+        p.includes('settings_') || 
+        p.includes('roles_') || 
+        p.includes('org_')
+      );
+      
+      if (allOrgPermissions.length > 0) {
         categories.push({
           name: 'Organization Management',
           description: 'Manage users, companies, providers, settings, and roles',
-          blocks: structure.organization.blocks.filter(block => permissionsToShow.includes(block)),
+          blocks: structure.organization.blocks.filter(block => allAvailablePermissions.includes(block)),
           granular: Object.entries(structure.organization.granular).map(([key, group]) => ({
             name: group.name,
-            permissions: group.permissions.filter(p => permissionsToShow.includes(p))
-          })).filter(group => group.permissions.length > 0)
+            permissions: group.permissions.filter(p => allAvailablePermissions.includes(p))
+          })).filter(group => group.permissions.length > 0),
+          enabledCount: orgPermissions.length,
+          totalCount: allOrgPermissions.length
         });
       }
     }
     
     // Analytics & Reports
     if (structure.analytics) {
-      const analyticsPermissions = permissionsToShow.filter(p => 
+      const analyticsPermissions = editingPermissions.filter(p => 
         p.includes('analytics_') || 
         p.includes('reports_')
       );
       
-      if (analyticsPermissions.length > 0) {
+      // Get all available analytics permissions for total count
+      const allAnalyticsPermissions = allAvailablePermissions.filter(p => 
+        p.includes('analytics_') || 
+        p.includes('reports_')
+      );
+      
+      if (allAnalyticsPermissions.length > 0) {
         categories.push({
           name: 'Analytics & Reports',
           description: 'View and export analytics data and reports',
-          blocks: structure.analytics.blocks.filter(block => permissionsToShow.includes(block)),
+          blocks: structure.analytics.blocks.filter(block => allAvailablePermissions.includes(block)),
           granular: Object.entries(structure.analytics.granular).map(([key, group]) => ({
             name: group.name,
-            permissions: group.permissions.filter(p => permissionsToShow.includes(p))
-          })).filter(group => group.permissions.length > 0)
+            permissions: group.permissions.filter(p => allAvailablePermissions.includes(p))
+          })).filter(group => group.permissions.length > 0),
+          enabledCount: analyticsPermissions.length,
+          totalCount: allAnalyticsPermissions.length
         });
       }
     }
     
     // Utilities
     if (structure.utilities) {
-      const utilityPermissions = permissionsToShow.filter(p => 
+      const utilityPermissions = editingPermissions.filter(p => 
         p.includes('geocoding_')
       );
       
-      if (utilityPermissions.length > 0) {
+      // Get all available utility permissions for total count
+      const allUtilityPermissions = allAvailablePermissions.filter(p => 
+        p.includes('geocoding_')
+      );
+      
+      if (allUtilityPermissions.length > 0) {
         categories.push({
           name: 'Utilities & Services',
           description: 'Additional utility services and features',
-          blocks: structure.utilities.blocks.filter(block => permissionsToShow.includes(block)),
+          blocks: structure.utilities.blocks.filter(block => allAvailablePermissions.includes(block)),
           granular: Object.entries(structure.utilities.granular).map(([key, group]) => ({
             name: group.name,
-            permissions: group.permissions.filter(p => permissionsToShow.includes(p))
-          })).filter(group => group.permissions.length > 0)
+            permissions: group.permissions.filter(p => allAvailablePermissions.includes(p))
+          })).filter(group => group.permissions.length > 0),
+          enabledCount: utilityPermissions.length,
+          totalCount: allUtilityPermissions.length
         });
       }
     }

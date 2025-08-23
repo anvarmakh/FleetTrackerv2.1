@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { authAPI } from '@/lib/api';
 import { X, Mail, ArrowLeft } from 'lucide-react';
@@ -75,8 +77,9 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-md">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="w-full max-w-md">
+        <Card className="w-full">
         <CardHeader className="space-y-4 text-center">
           <div className="flex items-center justify-between">
             <Button
@@ -127,7 +130,6 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full dark:bg-input dark:border-border dark:text-foreground"
                 />
               </div>
 
@@ -141,11 +143,11 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
             </form>
           ) : (
             <div className="space-y-4 text-center">
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                <p className="text-green-800 dark:text-green-200 text-sm">
-                  We've sent a password reset link to <strong>{email}</strong>
-                </p>
-              </div>
+                          <Alert>
+              <AlertDescription>
+                We've sent a password reset link to <strong>{email}</strong>
+              </AlertDescription>
+            </Alert>
               
               <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
                 <p>• Check your email inbox (and spam folder)</p>
@@ -165,7 +167,8 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
           )}
         </CardContent>
       </Card>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { LoadingSpinnerCentered } from '@/components/ui';
 import { useToast } from '@/hooks/use-toast';
 import { authAPI } from '@/lib/api';
 import { Truck, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
@@ -134,7 +136,7 @@ const ResetPassword = () => {
             </div>
           </CardHeader>
           <CardContent className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <LoadingSpinnerCentered size="md" />
           </CardContent>
         </Card>
       </div>
@@ -204,7 +206,7 @@ const ResetPassword = () => {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
-                  className="w-full pr-10 dark:bg-input dark:border-border dark:text-foreground"
+                  className="w-full pr-10"
                 />
                 <Button
                   type="button"
@@ -232,7 +234,7 @@ const ResetPassword = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="w-full pr-10 dark:bg-input dark:border-border dark:text-foreground"
+                  className="w-full pr-10"
                 />
                 <Button
                   type="button"
@@ -250,16 +252,16 @@ const ResetPassword = () => {
               </div>
             </div>
 
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <p className="text-blue-800 dark:text-blue-200 text-sm">
-                <strong>Password Requirements:</strong>
-              </p>
-              <ul className="text-blue-700 dark:text-blue-300 text-sm mt-1 space-y-1">
-                <li>• At least 8 characters long</li>
-                <li>• Use a mix of letters, numbers, and symbols</li>
-                <li>• Avoid common passwords</li>
-              </ul>
-            </div>
+            <Alert>
+              <AlertDescription>
+                <p className="font-semibold mb-2">Password Requirements:</p>
+                <ul className="space-y-1">
+                  <li>• At least 8 characters long</li>
+                  <li>• Use a mix of letters, numbers, and symbols</li>
+                  <li>• Avoid common passwords</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
 
             <Button 
               type="submit" 

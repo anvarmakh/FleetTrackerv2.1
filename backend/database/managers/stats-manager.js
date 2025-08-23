@@ -436,24 +436,109 @@ class StatsManager extends BaseManager {
     // ============================================================================
     
     async deleteTenant(tenantId) {
-        try {
-            if (!tenantId) {
-                throw new Error('Tenant ID is required');
+        return this.transact(async (tx) => {
+            try {
+                if (!tenantId) {
+                    throw new Error('Tenant ID is required');
+                }
+                
+                console.log(`🗑️ Starting comprehensive tenant deletion for: ${tenantId}`);
+                
+                // 1. Delete system notes for this tenant
+                const notesResult = await executeSingleQuery(tx, `
+                    DELETE FROM system_notes WHERE tenant_id = ?
+                `, [tenantId]);
+                console.log(`📝 Deleted ${notesResult.changes} system notes`);
+                
+                // 2. Delete maintenance alerts for this tenant's trailers
+                const alertsResult = await executeSingleQuery(tx, `
+                    DELETE FROM maintenance_alerts 
+                    WHERE trailer_id IN (SELECT id FROM persistent_trailers WHERE tenant_id = ?)
+                `, [tenantId]);
+                console.log(`⚠️ Deleted ${alertsResult.changes} maintenance alerts`);
+                
+                // 3. Delete tire records for this tenant's trailers
+                const tireResult = await executeSingleQuery(tx, `
+                    DELETE FROM tire_records 
+                    WHERE trailer_id IN (SELECT id FROM persistent_trailers WHERE tenant_id = ?)
+                `, [tenantId]);
+                console.log(`🛞 Deleted ${tireResult.changes} tire records`);
+                
+                // 4. Delete trailer inspections for this tenant's trailers
+                const inspectionsResult = await executeSingleQuery(tx, `
+                    DELETE FROM trailer_inspections 
+                    WHERE trailer_id IN (SELECT id FROM persistent_trailers WHERE tenant_id = ?)
+                `, [tenantId]);
+                console.log(`🔍 Deleted ${inspectionsResult.changes} trailer inspections`);
+                
+                // 5. Delete all trailers for this tenant
+                const trailersResult = await executeSingleQuery(tx, `
+                    DELETE FROM persistent_trailers WHERE tenant_id = ?
+                `, [tenantId]);
+                console.log(`🚛 Deleted ${trailersResult.changes} trailers`);
+                
+                // 6. Delete custom locations for this tenant
+                const locationsResult = await executeSingleQuery(tx, `
+                    DELETE FROM trailer_custom_locations WHERE tenant_id = ?
+                `, [tenantId]);
+                console.log(`📍 Deleted ${locationsResult.changes} custom locations`);
+                
+                // 7. Delete custom companies for this tenant
+                const customCompaniesResult = await executeSingleQuery(tx, `
+                    DELETE FROM trailer_custom_companies WHERE tenant_id = ?
+                `, [tenantId]);
+                console.log(`🏢 Deleted ${customCompaniesResult.changes} custom companies`);
+                
+                // 8. Delete GPS providers for this tenant
+                const providersResult = await executeSingleQuery(tx, `
+                    DELETE FROM gps_providers WHERE tenant_id = ?
+                `, [tenantId]);
+                console.log(`📡 Deleted ${providersResult.changes} GPS providers`);
+                
+                // 9. Delete companies for this tenant
+                const companiesResult = await executeSingleQuery(tx, `
+                    DELETE FROM companies WHERE tenant_id = ?
+                `, [tenantId]);
+                console.log(`🏢 Deleted ${companiesResult.changes} companies`);
+                
+                // 10. Delete users for this tenant
+                const usersResult = await executeSingleQuery(tx, `
+                    DELETE FROM users WHERE tenant_id = ?
+                `, [tenantId]);
+                console.log(`👥 Deleted ${usersResult.changes} users`);
+                
+                // 11. Finally, delete the tenant itself
+                const tenantResult = await executeSingleQuery(tx, `
+                    DELETE FROM tenants WHERE id = ?
+                `, [tenantId]);
+                
+                if (tenantResult.changes === 0) {
+                    throw new Error('Tenant not found');
+                }
+                
+                console.log(`✅ Tenant deletion complete: ${tenantId}`);
+                
+                return { 
+                    success: true, 
+                    changes: tenantResult.changes,
+                    deletedData: {
+                        notes: notesResult.changes,
+                        alerts: alertsResult.changes,
+                        tireRecords: tireResult.changes,
+                        inspections: inspectionsResult.changes,
+                        trailers: trailersResult.changes,
+                        locations: locationsResult.changes,
+                        customCompanies: customCompaniesResult.changes,
+                        providers: providersResult.changes,
+                        companies: companiesResult.changes,
+                        users: usersResult.changes
+                    }
+                };
+            } catch (error) {
+                console.error('Error deleting tenant:', error);
+                throw new Error(`Failed to delete tenant: ${error.message}`);
             }
-            
-            const result = await executeSingleQuery(this.db, `
-                DELETE FROM tenants WHERE id = ?
-            `, [tenantId]);
-            
-            if (result.changes === 0) {
-                throw new Error('Tenant not found');
-            }
-            
-            return { success: true, changes: result.changes };
-        } catch (error) {
-            console.error('Error deleting tenant:', error);
-            throw new Error('Failed to delete tenant');
-        }
+        });
     }
 
     async deactivateTenant(tenantId) {

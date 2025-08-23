@@ -787,73 +787,33 @@ router.delete('/tenants/:tenantId', authenticateToken, requireSuperAdmin, async 
             });
         }
         
-        // Wrap entire deletion process in one transaction-like sequence
-        let deletedUsers = 0;
-        let deletedCompanies = 0;
-        let deletedProviders = 0;
-        let deletedTrailers = 0;
-        const failures = [];
-
+        // Use comprehensive tenant deletion method
         try {
-            // Users
-            const tenantUsersResponse = await userManager.getUsersByTenant(tenantId);
-            const tenantUsers = tenantUsersResponse.data || [];
-            for (const user of tenantUsers) {
-                try { await userManager.hardDeleteUser(user.id); deletedUsers++; } catch (e) { failures.push({ type: 'user', id: user.id, error: e.message }); }
-            }
-
-            // Companies
-            const tenantCompaniesResponse = await companyManager.getCompaniesByTenant(tenantId);
-            const tenantCompanies = tenantCompaniesResponse.data || [];
-            for (const company of tenantCompanies) {
-                try { await companyManager.deleteCompany(company.id, req.user.id); deletedCompanies++; } catch (e) { failures.push({ type: 'company', id: company.id, error: e.message }); }
-            }
-
-            // Custom companies
-            const customCompaniesResponse = await trailerCustomCompanyManager.getCustomCompaniesByTenant(tenantId);
-            const customCompanies = customCompaniesResponse.data || [];
-            for (const customCompany of customCompanies) {
-                try { await trailerCustomCompanyManager.deleteCustomCompany(customCompany.id, tenantId); } catch (e) { failures.push({ type: 'custom_company', id: customCompany.id, error: e.message }); }
-            }
-
-            // Providers
-            const providersResponse = await gpsProviderManager.getTenantProviders(tenantId);
-            const providers = providersResponse.data || [];
-            for (const provider of providers) {
-                try { await gpsProviderManager.deleteProvider(provider.id, req.user.id); deletedProviders++; } catch (e) { failures.push({ type: 'provider', id: provider.id, error: e.message }); }
-            }
-
-            // Trailers (iterate companies)
-            for (const company of tenantCompanies) {
-                try {
-                    const companyTrailersResponse = await trailerManager.getAllTrailersForCompany(company.id, { limit: 1000, page: 1 });
-                    const companyTrailers = companyTrailersResponse.data || [];
-                    for (const trailer of companyTrailers) {
-                        try { await trailerManager.deleteTrailer(trailer.id, req.user.id); deletedTrailers++; } catch (e) { failures.push({ type: 'trailer', id: trailer.id, error: e.message }); }
-                    }
-                } catch (e) { failures.push({ type: 'company_trailers', companyId: company.id, error: e.message }); }
-            }
-
-            // Tenant
-            await statsManager.deleteTenant(tenantId);
-        } catch (e) {
-            failures.push({ type: 'tenant', id: tenantId, error: e.message });
+            const deletionResult = await statsManager.deleteTenant(tenantId);
+            
+            logger.info('Tenant and all associated data deleted successfully', { 
+                tenantId, 
+                deletedData: deletionResult.deletedData 
+            });
+            
+            res.json({
+                success: true,
+                message: `Tenant ${tenantId} and all associated data deleted successfully`,
+                data: {
+                    tenantId,
+                    deletedData: deletionResult.deletedData
+                }
+            });
+        } catch (error) {
+            logger.error('Tenant deletion failed', { tenantId, error: error.message });
+            
+            res.status(500).json({
+                success: false,
+                error: `Failed to delete tenant: ${error.message}`
+            });
         }
         
-        logger.info('Tenant and all associated data deleted successfully', { tenantId });
-        
-        res.json({
-            success: failures.length === 0,
-            message: failures.length === 0 ? `Tenant ${tenantId} and all associated data deleted successfully` : `Tenant ${tenantId} deleted with some errors`,
-            data: {
-                tenantId,
-                deletedUsers,
-                deletedCompanies,
-                deletedProviders,
-                deletedTrailers,
-                failures
-            }
-        });
+
     } catch (error) {
         console.error('Delete tenant error:', error);
         res.status(500).json({

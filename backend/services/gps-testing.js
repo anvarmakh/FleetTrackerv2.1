@@ -1,5 +1,6 @@
 const axios = require('axios');
 const xml2js = require('xml2js');
+const logger = require('../utils/logger');
 
 /**
  * Check if an asset is active based on its status, name, and ID
@@ -34,8 +35,8 @@ async function testSpireonConnection(credentials) {
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            console.log(`Testing Spireon connection... (Attempt ${attempt}/${maxRetries})`);
-            console.log('Received credentials:', JSON.stringify(credentials, null, 2));
+            logger.info(`Testing Spireon connection... (Attempt ${attempt}/${maxRetries})`);
+            logger.info('Received credentials:', JSON.stringify(credentials, null, 2));
             
             const { apiKey, username, password, nspireId } = credentials;
             const baseURL = credentials.baseURL || 'https://services.spireon.com/v0/rest';
@@ -64,15 +65,13 @@ async function testSpireonConnection(credentials) {
 
             const assets = response.data.content || response.data || [];
             
-            console.log(`✅ Spireon test successful: ${assets.length} total assets found`);
+            logger.info(`✅ Spireon test successful: ${assets.length} total assets found`);
             
             // Transform assets to a consistent format and filter out inactive units
             const transformedAssets = assets
                 .filter(asset => {
                     const isActive = isAssetActive(asset);
-                    if (!isActive) {
-                        console.log(`🔍 Asset ${asset.id || asset.assetId}: INACTIVE due to name/ID containing "inactive"`);
-                    }
+                    // Filter out inactive assets silently
                     return isActive;
                 })
                 .map(asset => {
@@ -114,7 +113,7 @@ async function testSpireonConnection(credentials) {
                 });
             
             const filteredOutCount = assets.length - transformedAssets.length;
-            console.log(`✅ Spireon filtered: ${transformedAssets.length} active assets (${filteredOutCount} inactive assets filtered out)`);
+            logger.info(`✅ Spireon filtered: ${transformedAssets.length} active assets (${filteredOutCount} inactive assets filtered out)`);
             
             return {
                 success: true,
@@ -123,12 +122,12 @@ async function testSpireonConnection(credentials) {
                 message: `Connected successfully. Found ${transformedAssets.length} active assets (${assets.length} total).`
             };
         } catch (error) {
-            console.error(`❌ Spireon test failed (Attempt ${attempt}/${maxRetries}):`, error.message);
+            logger.error(`❌ Spireon test failed (Attempt ${attempt}/${maxRetries}):`, error.message);
             lastError = error;
             
             // If this is not the last attempt, wait a bit before retrying
             if (attempt < maxRetries) {
-                console.log(`⏳ Waiting 2 seconds before retry...`);
+                logger.info(`⏳ Waiting 2 seconds before retry...`);
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 continue;
             }
@@ -136,7 +135,7 @@ async function testSpireonConnection(credentials) {
     }
     
     // If we get here, all attempts failed
-    console.error('❌ All Spireon test attempts failed');
+    logger.error('❌ All Spireon test attempts failed');
     
     let errorMessage = 'Connection failed';
     if (lastError.response) {
@@ -168,8 +167,8 @@ async function testSpireonConnection(credentials) {
  */
 async function testSkyBitzConnection(credentials) {
     try {
-        console.log('Testing SkyBitz connection...');
-        console.log('Received credentials:', JSON.stringify(credentials, null, 2));
+        logger.info('Testing SkyBitz connection...');
+        logger.info('Received credentials:', JSON.stringify(credentials, null, 2));
         
         const { username, password } = credentials;
         const baseURL = credentials.baseURL || 'https://xml.skybitz.com:9443';
@@ -216,18 +215,14 @@ async function testSkyBitzConnection(credentials) {
                 : [result.skybitz.gls];
             trailerCount = glsData.length;
             
-            // Debug: Log all statuses to see what we're getting
-            console.log('🔍 All asset statuses from SkyBitz:');
-            const allStatuses = glsData.map(asset => asset.status || 'no-status');
-            console.log('🔍 Statuses:', allStatuses);
+
             
             // Transform SkyBitz assets to consistent format and filter out inactive units
             assets = glsData
                 .filter(asset => {
                     const isActive = isAssetActive(asset);
                     
-                    // Debug: Log filtering decision
-                    console.log(`🔍 Asset ${asset.id || asset.assetId}: name="${asset.name || asset.assetName}", status="${asset.status}" -> isActive=${isActive}`);
+
                     
                     return isActive;
                 })
@@ -247,9 +242,9 @@ async function testSkyBitzConnection(credentials) {
                 });
         }
         
-        console.log(`✅ SkyBitz test successful: ${glsData.length} total assets found`);
+        logger.info(`✅ SkyBitz test successful: ${glsData.length} total assets found`);
         const filteredOutCount = glsData.length - assets.length;
-        console.log(`✅ SkyBitz filtered: ${assets.length} active assets (${filteredOutCount} inactive assets filtered out)`);
+        logger.info(`✅ SkyBitz filtered: ${assets.length} active assets (${filteredOutCount} inactive assets filtered out)`);
         
         return {
             success: true,
@@ -258,7 +253,7 @@ async function testSkyBitzConnection(credentials) {
             message: `Connected successfully. Found ${assets.length} active assets (${glsData.length} total).`
         };
     } catch (error) {
-        console.error('❌ SkyBitz test failed:', error.message);
+        logger.error('❌ SkyBitz test failed:', error.message);
         
         let errorMessage = 'Connection failed';
         if (error.response) {
@@ -289,8 +284,8 @@ async function testSkyBitzConnection(credentials) {
  */
 async function testSamsaraConnection(credentials) {
     try {
-        console.log('Testing Samsara connection...');
-        console.log('Received credentials:', JSON.stringify(credentials, null, 2));
+        logger.info('Testing Samsara connection...');
+        logger.info('Received credentials:', JSON.stringify(credentials, null, 2));
         
         const { apiToken, apiUrl } = credentials;
         
@@ -318,18 +313,14 @@ async function testSamsaraConnection(credentials) {
         );
         const trailerCount = trailers.length;
         
-        // Debug: Log all statuses to see what we're getting
-        console.log('🔍 All vehicle statuses from Samsara:');
-        const allStatuses = trailers.map(vehicle => vehicle.status || 'no-status');
-        console.log('🔍 Statuses:', allStatuses);
+
         
         // Transform Samsara trailers to consistent format and filter out inactive units
         const assets = trailers
             .filter(vehicle => {
                 const isActive = isAssetActive(vehicle);
                 
-                // Debug: Log filtering decision
-                console.log(`🔍 Vehicle ${vehicle.id || vehicle.assetId}: name="${vehicle.name || vehicle.assetName}", status="${vehicle.status}" -> isActive=${isActive}`);
+
                 
                 return isActive;
             })
@@ -348,9 +339,9 @@ async function testSamsaraConnection(credentials) {
                 };
             });
         
-        console.log(`✅ Samsara test successful: ${vehicles.length} vehicles found, ${trailers.length} total trailers`);
+        logger.info(`✅ Samsara test successful: ${vehicles.length} vehicles found, ${trailers.length} total trailers`);
         const filteredOutCount = trailers.length - assets.length;
-        console.log(`✅ Samsara filtered: ${assets.length} active trailers (${filteredOutCount} inactive trailers filtered out)`);
+        logger.info(`✅ Samsara filtered: ${assets.length} active trailers (${filteredOutCount} inactive trailers filtered out)`);
         
         return {
             success: true,
@@ -359,7 +350,7 @@ async function testSamsaraConnection(credentials) {
             message: `Connected successfully. Found ${assets.length} active trailers (${trailers.length} total trailers).`
         };
     } catch (error) {
-        console.error('❌ Samsara test failed:', error.message);
+        logger.error('❌ Samsara test failed:', error.message);
         
         let errorMessage = 'Connection failed';
         if (error.response) {

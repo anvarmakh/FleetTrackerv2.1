@@ -7,7 +7,6 @@ export interface Trailer {
   vin?: string;
   plate?: string;
   status: string;
-  gpsStatus: string;
   lastGpsUpdate?: string;
   lastSync?: string;
   lastAnnualInspection?: string;
@@ -70,6 +69,5 @@ export interface CustomLocation {
 export interface TrailerFilterState {
   status: string;
   company: string;
-  gpsStatus: string;
   maintenance: string;
 }

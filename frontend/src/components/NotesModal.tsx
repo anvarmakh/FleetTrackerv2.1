@@ -6,7 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { LoadingSpinnerCentered } from '@/components/ui';
 import { Plus, Edit, Trash2, X, Save, FileText } from 'lucide-react';
+import { formatDateInTimezone } from '@/lib/utils';
 import { systemNotesAPI } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -131,14 +133,14 @@ export default function NotesModal({ isOpen, onClose, trailerId, trailerName, on
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    const userTimezone = localStorage.getItem('userTimezone') || 'America/Chicago';
+    return formatDateInTimezone(dateString, userTimezone, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    });
+    }, true); // Show timezone indicator
   };
 
   return (
@@ -224,8 +226,7 @@ export default function NotesModal({ isOpen, onClose, trailerId, trailerName, on
           <div className="space-y-3">
             {loading ? (
               <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading notes...</p>
+                <LoadingSpinnerCentered text="Loading notes..." />
               </div>
             ) : notes.length === 0 ? (
               <div className="text-center py-12">

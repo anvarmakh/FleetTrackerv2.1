@@ -187,13 +187,13 @@ const requireSuperAdmin = async (req, res, next) => {
             });
         }
 
-        if (user.organizationRole !== 'owner') {
+        if (user.organizationRole !== 'systemAdmin') {
             logger.warn(`Super admin access denied: User ${user.id} (${user.email}) attempted to access ${req.method} ${req.originalUrl}`);
             
             return res.status(403).json({
                 success: false,
-                error: 'Super admin access required',
-                message: 'This action requires super administrator privileges'
+                error: 'System admin access required',
+                message: 'This action requires system administrator privileges'
             });
         }
 

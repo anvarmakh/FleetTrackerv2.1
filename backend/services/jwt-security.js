@@ -187,7 +187,7 @@ class JWTSecurityService {
                 }
 
                 // Check if user is still active (skip for system admin)
-                if (decoded.id === 'admin_system' && decoded.organizationRole === 'superAdmin') {
+                if (decoded.id === 'admin_system' && decoded.organizationRole === 'systemAdmin') {
                     // System admin - no database check needed
                     resolve(decoded);
                 } else {
@@ -268,7 +268,7 @@ class JWTSecurityService {
                     lastName: 'SuperAdmin',
                     tenantId: 'system',
                     companyId: null,
-                    organizationRole: 'superAdmin'
+                    organizationRole: 'systemAdmin'
                 };
             } else {
                 // Get fresh user data for regular users

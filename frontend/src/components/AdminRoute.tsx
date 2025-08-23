@@ -11,11 +11,11 @@ interface AdminRouteProps {
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   const { user } = useAuth();
 
-  // Check for SuperAdmin access only
-  const isSuperAdmin = user?.organizationRole === 'superAdmin';
+  // Check for SystemAdmin access only
+  const isSystemAdmin = user?.organizationRole === 'systemAdmin';
 
-  // Allow access only if user has SuperAdmin role
-  if (!isSuperAdmin) {
+  // Allow access only if user has SystemAdmin role
+  if (!isSystemAdmin) {
     return (
       <div className="container mx-auto p-6">
         <Card className="max-w-md mx-auto mt-20">
@@ -30,7 +30,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-sm text-muted-foreground mb-4">
-              Only SuperAdmins can access this system management area.
+              Only SystemAdmins can access this system management area.
             </p>
             <Navigate to="/dashboard" replace />
           </CardContent>

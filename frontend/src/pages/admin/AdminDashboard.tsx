@@ -5,6 +5,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatDateInTimezone } from '@/lib/utils';
 import { useAdminDashboard } from '../../hooks/useAdminDashboard';
 import { AdminOverview } from './components/AdminOverview';
 import { TenantManagement } from './components/TenantManagement';
@@ -145,7 +146,10 @@ const AdminDashboard = () => {
                   <div key={index} className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">
-                        {new Date(log.timestamp).toLocaleString()}
+                        {(() => {
+                          const userTimezone = localStorage.getItem('userTimezone') || 'America/Chicago';
+                          return formatDateInTimezone(log.timestamp, userTimezone, {}, true); // Show timezone indicator
+                        })()}
                       </span>
                       <span className={`px-2 py-1 rounded text-xs ${
                         log.level === 'error' ? 'bg-red-100 text-red-800' :

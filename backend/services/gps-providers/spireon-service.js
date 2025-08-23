@@ -1,5 +1,7 @@
-const BaseGPSProvider = require('./base-provider');
 const axios = require('axios');
+const BaseGPSProvider = require('./base-provider');
+const logger = require('../../utils/logger');
+const geocodingService = require('../geocoding');
 
 /**
  * Spireon GPS Provider Service
@@ -27,7 +29,14 @@ class SpireonService extends BaseGPSProvider {
      */
     async fetchData(credentials) {
         try {
-
+            logger.info(`📡 Fetching Spireon data for ${credentials.providerName || 'Spireon'}...`);
+            logger.debug(`🔑 Credentials check:`, {
+                hasApiKey: !!credentials.apiKey,
+                hasUsername: !!credentials.username,
+                hasPassword: !!credentials.password,
+                hasNspireId: !!credentials.nspireId,
+                baseURL: credentials.baseURL || 'https://services.spireon.com/v0/rest'
+            });
             
             if (!this.validateCredentials(credentials)) {
                 throw new Error('Invalid Spireon credentials: apiKey, username, password, and nspireId are required');
@@ -37,6 +46,9 @@ class SpireonService extends BaseGPSProvider {
             const baseURL = credentials.baseURL || 'https://services.spireon.com/v0/rest';
             
             const basicAuth = Buffer.from(`${username}:${password}`).toString('base64');
+            
+            logger.info(`🌐 Making request to: ${baseURL}/assets`);
+            logger.debug(`🔑 Using API key: ${apiKey.substring(0, 8)}...`);
             
             const response = await axios.get(`${baseURL}/assets`, {
                 headers: {
@@ -48,15 +60,18 @@ class SpireonService extends BaseGPSProvider {
                 timeout: 30000
             });
 
+            logger.info(`📥 Response status: ${response.status}`);
+            logger.info(`📥 Assets found: ${response.data?.content?.length || response.data?.length || 0}`);
+
             const assets = response.data.content || response.data || [];
-            const processedTrailers = this.processTrailerData(assets, credentials.providerName || 'Spireon');
+            const processedTrailers = await this.processTrailerData(assets, credentials.providerName || 'Spireon');
             return processedTrailers;
             
         } catch (error) {
-            console.error(`❌ Error fetching Spireon data:`, error.message);
+            logger.error(`❌ Error fetching Spireon data:`, error.message);
             if (error.response) {
-                console.error(`❌ Response status: ${error.response.status}`);
-                console.error(`❌ Response data:`, error.response.data);
+                logger.error(`❌ Response status: ${error.response.status}`);
+                logger.error(`❌ Response data:`, error.response.data);
             }
             return [];
         }
@@ -68,9 +83,35 @@ class SpireonService extends BaseGPSProvider {
      * @param {string} providerName - Provider name
      * @returns {Array} Standardized trailer data
      */
-    processTrailerData(assets, providerName) {
-        const processedTrailers = assets.map(asset => {
+    async processTrailerData(assets, providerName) {
+        const processedTrailers = await Promise.all(assets.map(async (asset) => {
             const mappedStatus = this.mapStatus(asset.status);
+            
+            // Geocode coordinates for address
+            let fullAddress = 'Location unavailable';
+            
+            if (asset.lastLocation?.lat && asset.lastLocation?.lng) {
+                const latNum = parseFloat(asset.lastLocation.lat);
+                const lngNum = parseFloat(asset.lastLocation.lng);
+                
+                if (!isNaN(latNum) && !isNaN(lngNum) && 
+                    latNum >= -90 && latNum <= 90 && 
+                    lngNum >= -180 && lngNum <= 180) {
+                    
+                    try {
+                        const reverseAddress = await geocodingService.getStandardizedAddress(latNum, lngNum);
+                        fullAddress = reverseAddress && reverseAddress !== 'Location unavailable' 
+                            ? reverseAddress 
+                            : `${latNum}, ${lngNum}`;
+                    } catch (error) {
+                        fullAddress = `${latNum}, ${lngNum}`;
+                    }
+                }
+            }
+            
+            // Clean unit number by removing "Trailer" text
+            const rawUnitNumber = asset.name || asset.id;
+            const cleanedUnitNumber = this.cleanUnitNumber(rawUnitNumber);
             
             return this.createStandardTrailer({
                 id: `${providerName.replace(/\s+/g, '')}-${asset.id}`,
@@ -84,17 +125,17 @@ class SpireonService extends BaseGPSProvider {
                 driver: asset.driverName || asset.operatorName || 'Unknown',
                 deviceId: asset.instrumentationRef?.deviceId || asset.id,
                 originalId: asset.name || asset.id,
+                unit_number: cleanedUnitNumber, // Use cleaned unit number
                 make: asset.make,
                 model: asset.model,
                 year: asset.year,
                 vin: asset.vin,
                 plate: asset.plate || asset.licensePlate || asset.registration || null,
                 odometer: asset.odometer,
-                address: asset.lastLocation?.address ? 
-                    `${asset.lastLocation.address.city}, ${asset.lastLocation.address.stateOrProvince}` : 
-                    'Unknown'
+                address: fullAddress, // Always use full address (formatted string)
+                last_address: fullAddress // Always use full address (formatted string)
             });
-        });
+        }));
         
         return this.filterValidTrailers(processedTrailers);
     }

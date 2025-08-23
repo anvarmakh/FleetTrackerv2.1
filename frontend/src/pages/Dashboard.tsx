@@ -48,10 +48,10 @@ const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  // Redirect SuperAdmin users to admin dashboard
+  // Redirect SystemAdmin users to admin dashboard
   useEffect(() => {
-    const isSuperAdmin = user?.organizationRole === 'superAdmin';
-    if (isSuperAdmin) {
+    const isSystemAdmin = user?.organizationRole === 'systemAdmin';
+    if (isSystemAdmin) {
       navigate('/admin');
     }
   }, [user, navigate]);

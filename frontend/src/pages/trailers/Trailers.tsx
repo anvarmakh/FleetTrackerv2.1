@@ -38,7 +38,6 @@ const Trailers = () => {
   const [filters, setFilters] = useState<TrailerFilterState>({
     status: '',
     company: '',
-    gpsStatus: '',
     maintenance: ''
   });
   const [selectedTrailer, setSelectedTrailer] = useState<Trailer | null>(null);
@@ -86,7 +85,7 @@ const Trailers = () => {
   const { toast } = useToast();
 
   // Function to calculate distance between two points in miles
-  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  const calculateDistance = useCallback((lat1: number, lng1: number, lat2: number, lng2: number): number => {
     const R = 3959; // Earth's radius in miles
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLng = (lng2 - lng1) * Math.PI / 180;
@@ -95,21 +94,27 @@ const Trailers = () => {
               Math.sin(dLng/2) * Math.sin(dLng/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R * c;
-  };
+  }, []);
 
   // Function to count trailers within 2 miles of a location
-  const getTrailersNearLocation = (locationLat: number, locationLng: number): number => {
+  const getTrailersNearLocation = useCallback((locationLat: number, locationLng: number): number => {
     return trailers.filter(trailer => {
       // Use lastLatitude/lastLongitude from GPS provider, fallback to latitude/longitude
       // Convert to numbers in case they're strings
-      const trailerLat = parseFloat(trailer.lastLatitude || trailer.latitude);
-      const trailerLng = parseFloat(trailer.lastLongitude || trailer.longitude);
+      const trailerLat = parseFloat(trailer.lastLatitude || trailer.latitude || '0');
+      const trailerLng = parseFloat(trailer.lastLongitude || trailer.longitude || '0');
       
-      if (isNaN(trailerLat) || isNaN(trailerLng)) return false;
+      if (isNaN(trailerLat) || isNaN(trailerLng) || trailerLat === 0 || trailerLng === 0) return false;
       const distance = calculateDistance(locationLat, locationLng, trailerLat, trailerLng);
+      
+      // Debug logging for NRG Yard location
+      if (locationLat === 41.6909 && locationLng === -87.9382) {
+        console.log(`Trailer ${trailer.unitNumber}: lat=${trailerLat}, lng=${trailerLng}, distance=${distance.toFixed(2)} miles`);
+      }
+      
       return distance <= 2;
     }).length;
-  };
+  }, [trailers]);
 
   // Function to handle clicking on trailer count in location table
   const handleLocationTrailerCountClick = (location: CustomLocation) => {
@@ -200,90 +205,8 @@ const Trailers = () => {
     }
   }, []);
 
-  // Load data function
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      
-      // Load maintenance preferences first
-      await loadMaintenancePreferences();
-      
-      // Load trailers
-      const trailersResponse = await trailerAPI.getTrailers();
-      
-      // Handle different response structures
-      let trailerData = [];
-      if (trailersResponse.data && trailersResponse.data.success) {
-        trailerData = trailersResponse.data.data || [];
-      } else if (Array.isArray(trailersResponse.data)) {
-        trailerData = trailersResponse.data;
-      }
-      
-      setTrailers(trailerData);
-      
-      // Load recent notes for each trailer
-      await loadRecentNotes(trailerData);
-
-      // Load companies
-      const companiesResponse = await companyAPI.getCompaniesForFilter();
-      
-      let companies = [];
-      if (companiesResponse.data && companiesResponse.data.success) {
-        companies = companiesResponse.data.companies || companiesResponse.data.data || [];
-      } else if (Array.isArray(companiesResponse.data)) {
-        // Direct array response
-        companies = companiesResponse.data;
-      }
-      
-      setCompanies(companies);
-
-    } catch (error) {
-      console.error('🔄 Frontend - Error loading data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load trailer data",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
-  // Use the shared GPS sync hook (after loadData is defined)
-  const { refreshing, handleRefresh } = useGpsSync(loadData);
-
-  // Load custom locations
-  const loadCustomLocations = useCallback(async () => {
-    try {
-      setLoadingLocations(true);
-      const response = await trailerCustomLocationAPI.getCustomLocations();
-      
-      if (response.data.success) {
-        const locations = response.data.data;
-        
-        // Calculate trailer counts for each location
-        const locationsWithCounts = locations.map((location: CustomLocation) => {
-          const count = getTrailersNearLocation(
-            Number(location.lat || location.latitude), 
-            Number(location.lng || location.longitude)
-          );
-          return {
-            ...location,
-            trailerCount: count
-          };
-        });
-        
-        setCustomLocations(locationsWithCounts);
-      }
-    } catch (error) {
-      console.error('Error loading custom locations:', error);
-    } finally {
-      setLoadingLocations(false);
-    }
-  }, [trailers]);
-
   // Load recent notes - optimized to load in parallel
-  const loadRecentNotes = async (trailerList: Trailer[]) => {
+  const loadRecentNotes = useCallback(async (trailerList: Trailer[]) => {
     try {
       const notesMap: Record<string, RecentNote> = {};
       
@@ -329,9 +252,151 @@ const Trailers = () => {
     } catch (error) {
       console.error('Error loading recent notes:', error);
     }
-  };
+  }, []);
 
+  // Load custom locations
+  const loadCustomLocations = useCallback(async (currentTrailers?: any[]) => {
+    // Prevent multiple simultaneous calls
+    if (loadingLocations) return;
+    
+    try {
+      setLoadingLocations(true);
+      const response = await trailerCustomLocationAPI.getCustomLocations();
+      
+      if (response.data.success) {
+        const locations = response.data.data;
+        const trailersToUse = currentTrailers || trailers;
+        
+        // Calculate trailer counts for each location using direct calculation
+        const locationsWithCounts = locations.map((location: CustomLocation) => {
+          const locationLat = Number(location.lat || location.latitude);
+          const locationLng = Number(location.lng || location.longitude);
+          
+          // Count trailers within 2 miles directly
+          const count = trailersToUse.filter(trailer => {
+            const trailerLat = parseFloat(trailer.lastLatitude || trailer.latitude || '0');
+            const trailerLng = parseFloat(trailer.lastLongitude || trailer.longitude || '0');
+            
+            if (isNaN(trailerLat) || isNaN(trailerLng) || trailerLat === 0 || trailerLng === 0) return false;
+            
+            const distance = calculateDistance(locationLat, locationLng, trailerLat, trailerLng);
+            
+            // Enhanced debug logging for NRG Yard and specific trailers
+            if (location.name === 'NRG Yard' || trailer.unitNumber === '905830' || trailer.unitNumber === 'DV7571') {
+              console.log(`🔍 ${location.name} - Trailer ${trailer.unitNumber}:`, {
+                trailerLat,
+                trailerLng,
+                distance: distance.toFixed(2),
+                withinRange: distance <= 2,
+                address: trailer.lastAddress || trailer.address,
+                lastAddress: trailer.lastAddress,
+                currentAddress: trailer.address,
+                hasValidCoords: !isNaN(trailerLat) && !isNaN(trailerLng) && trailerLat !== 0 && trailerLng !== 0
+              });
+            }
+            
+            return distance <= 2;
+          }).length;
+          
+          // Debug logging for NRG Yard
+          if (location.name === 'NRG Yard') {
+            console.log(`🏠 NRG Yard Summary:`, {
+              locationLat,
+              locationLng,
+              trailerCount: count,
+              totalTrailers: trailersToUse.length,
+              trailersWithValidCoords: trailersToUse.filter(t => {
+                const lat = parseFloat(t.lastLatitude || t.latitude || '0');
+                const lng = parseFloat(t.lastLongitude || t.longitude || '0');
+                return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+              }).length
+            });
+          }
+          
+          return {
+            ...location,
+            trailerCount: count
+          };
+        });
+        
+        setCustomLocations(locationsWithCounts);
+      }
+    } catch (error) {
+      console.error('Error loading custom locations:', error);
+    } finally {
+      setLoadingLocations(false);
+    }
+  }, [trailers, loadingLocations, calculateDistance]);
 
+  // Load data function
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      // Load maintenance preferences first
+      await loadMaintenancePreferences();
+      
+      // Load trailers
+      const trailersResponse = await trailerAPI.getTrailers();
+      
+      // Handle different response structures
+      let trailerData = [];
+      if (trailersResponse.data && trailersResponse.data.success) {
+        trailerData = trailersResponse.data.data || [];
+      } else if (Array.isArray(trailersResponse.data)) {
+        trailerData = trailersResponse.data;
+      }
+      
+      setTrailers(trailerData);
+      
+      // Debug logging to check location data
+      console.log('🔄 Frontend - Loaded trailers:', trailerData.length);
+      if (trailerData.length > 0) {
+        const sampleTrailer = trailerData[0];
+        console.log('🔄 Frontend - Sample trailer location data:', {
+          unitNumber: sampleTrailer.unitNumber,
+          lastAddress: sampleTrailer.lastAddress,
+          lastLatitude: sampleTrailer.lastLatitude,
+          lastLongitude: sampleTrailer.lastLongitude,
+          address: sampleTrailer.address,
+          latitude: sampleTrailer.latitude,
+          longitude: sampleTrailer.longitude
+        });
+      }
+      
+      // Load recent notes for each trailer
+      await loadRecentNotes(trailerData);
+
+      // Load companies
+      const companiesResponse = await companyAPI.getCompaniesForFilter();
+      
+      let companies = [];
+      if (companiesResponse.data && companiesResponse.data.success) {
+        companies = companiesResponse.data.companies || companiesResponse.data.data || [];
+      } else if (Array.isArray(companiesResponse.data)) {
+        // Direct array response
+        companies = companiesResponse.data;
+      }
+      
+      setCompanies(companies);
+
+      // Load custom locations after trailers are loaded to ensure accurate counts
+      await loadCustomLocations(trailerData);
+
+    } catch (error) {
+      console.error('🔄 Frontend - Error loading data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load trailer data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]); // Only depend on toast, not other functions
+
+  // Use the shared GPS sync hook (after loadData is defined)
+  const { refreshing, handleRefresh } = useGpsSync(loadData);
 
   // Calculate stats
   const calculateStats = useCallback(() => {
@@ -388,12 +453,7 @@ const Trailers = () => {
       );
     }
 
-    // Apply GPS status filter
-    if (filters.gpsStatus) {
-      filtered = filtered.filter(trailer => 
-        trailer.gpsStatus.toLowerCase() === filters.gpsStatus.toLowerCase()
-      );
-    }
+
 
     // Apply maintenance filter
     if (filters.maintenance) {
@@ -426,10 +486,10 @@ const Trailers = () => {
       filtered = filtered.filter(trailer => {
         // Use lastLatitude/lastLongitude from GPS provider, fallback to latitude/longitude
         // Convert to numbers in case they're strings
-        const trailerLat = parseFloat(trailer.lastLatitude || trailer.latitude);
-        const trailerLng = parseFloat(trailer.lastLongitude || trailer.longitude);
+        const trailerLat = parseFloat(trailer.lastLatitude || trailer.latitude || '0');
+        const trailerLng = parseFloat(trailer.lastLongitude || trailer.longitude || '0');
         
-        if (isNaN(trailerLat) || isNaN(trailerLng)) return false;
+        if (isNaN(trailerLat) || isNaN(trailerLng) || trailerLat === 0 || trailerLng === 0) return false;
         const distance = calculateDistance(
           activeLocationFilter.lat, 
           activeLocationFilter.lng, 
@@ -720,7 +780,7 @@ const Trailers = () => {
         title: "Success",
         description: "Location deleted successfully",
       });
-      await loadCustomLocations();
+      await loadCustomLocations(trailers);
     } catch (error) {
       console.error('Error deleting location:', error);
       toast({
@@ -743,7 +803,7 @@ const Trailers = () => {
         type: 'yard'
       };
       await trailerCustomLocationAPI.createCustomLocation(newLocation);
-      await loadCustomLocations();
+      await loadCustomLocations(trailers);
       toast({
         title: "Location Added",
         description: `${newLocation.name} has been added`,
@@ -774,23 +834,26 @@ const Trailers = () => {
   // Effects
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, []); // Only run once on mount
 
   useEffect(() => {
     calculateStats();
-  }, [calculateStats]);
+  }, [trailers]); // Only run when trailers change
 
   useEffect(() => {
     applyFiltersAndSorting();
-  }, [applyFiltersAndSorting]);
+  }, [trailers, searchTerm, filters, activeLocationFilter, activeStatsFilter, sortConfig, recentNotes]); // Direct dependencies
 
   // Reload custom locations when trailers change
   useEffect(() => {
     if (trailers.length > 0) {
-      // console.log('🔄 Frontend - Trailers changed, reloading custom locations. Trailers count:', trailers.length);
-      loadCustomLocations();
+      const timeoutId = setTimeout(() => {
+        loadCustomLocations(trailers);
+      }, 100); // Small delay to prevent rapid re-renders
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [trailers, loadCustomLocations]);
+  }, [trailers]); // Only depend on trailers, not loadCustomLocations
 
   const hasActiveFilters = Object.values(filters).some(value => value !== '') || 
     activeLocationFilter !== null || 
@@ -934,7 +997,9 @@ const Trailers = () => {
         trailer={selectedLocation}
         isOpen={isLocationEditModalOpen}
         onClose={handleCloseLocationEditModal}
-        onLocationUpdated={loadCustomLocations}
+        onLocationUpdated={() => {
+          loadData();
+        }}
       />
 
       <NotesModal

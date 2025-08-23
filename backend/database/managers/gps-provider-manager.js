@@ -8,11 +8,12 @@ const {
     executeQuery, executeSingleQuery, executeQueryFirst, executeInTransaction,
     buildWhereClause, buildOrderByClause, buildLimitClause
 } = require('../utils/db-helpers');
+const { getDefaultPaginationForType, normalizePagination, buildPaginationClause, createPaginatedResponse } = require('../../utils/pagination');
+const EncryptionUtil = require('../../utils/encryption');
+const logger = require('../../utils/logger');
 
 const { GPS_PROVIDER_TYPES } = require('../../utils/constants');
-const EncryptionUtil = require('../../utils/encryption');
 const BaseManager = require('./baseManager');
-const { normalizePagination, buildPaginationClause, createPaginatedResponse, getDefaultPaginationForType } = require('../../utils/pagination');
 
 class GPSProviderManager extends BaseManager {
     constructor(db) {
@@ -44,21 +45,10 @@ class GPSProviderManager extends BaseManager {
             // Use the provided company_id if available, otherwise use the default companyId
             const targetCompanyId = company_id || companyId;
             
-            console.log('🔐 Adding provider with credentials:', {
-                name,
-                type,
-                tenant_id,
-                credentials: credentials ? 'CREDENTIALS_PRESENT' : 'NULL',
-                credentials_type: typeof credentials,
-                credentials_keys: credentials ? Object.keys(credentials) : []
-            });
+            logger.logCredentials('Adding', type, !!credentials, credentials ? Object.keys(credentials) : []);
             
             const encryptedCredentials = credentials ? EncryptionUtil.encrypt(JSON.stringify(credentials)) : null;
-            console.log('🔐 Encrypted credentials result:', {
-                encrypted: encryptedCredentials ? 'ENCRYPTED_DATA_PRESENT' : 'NULL',
-                encrypted_length: encryptedCredentials ? encryptedCredentials.length : 0,
-                credentials_json: credentials ? JSON.stringify(credentials) : 'NULL'
-            });
+            logger.logEncryption('Credentials encrypted', !!encryptedCredentials, encryptedCredentials ? encryptedCredentials.length : 0);
 
             const query = `
                 INSERT INTO gps_providers (id, tenant_id, company_id, name, type, credentials_encrypted)
@@ -95,7 +85,7 @@ class GPSProviderManager extends BaseManager {
 
             return await executeQuery(this.db, query, [companyId, actualTenantId]);
         } catch (error) {
-            console.error('❌ Error fetching company providers:', error);
+            logger.error('Error fetching company providers', error);
             throw error;
         }
     }
@@ -283,12 +273,6 @@ class GPSProviderManager extends BaseManager {
             `;
 
             const result = await executeQueryFirst(this.db, query, [providerId, userId]);
-            console.log('🔍 getProviderForUser result:', {
-                id: result?.id,
-                name: result?.name,
-                credentialsEncrypted: result?.credentials_encrypted ? 'ENCRYPTED_DATA_PRESENT' : 'NULL',
-                credentialsLength: result?.credentials_encrypted ? result.credentials_encrypted.length : 0
-            });
             return result;
         } catch (error) {
             console.error('❌ Error fetching provider for user:', error);
@@ -337,21 +321,11 @@ class GPSProviderManager extends BaseManager {
                 throw new Error('Invalid provider type');
             }
             
-            console.log('🔐 Updating provider with:', {
-                providerId,
-                userId,
-                name,
-                type,
-                credentials: credentials ? 'CREDENTIALS_PRESENT' : 'NULL',
-                credentials_keys: credentials ? Object.keys(credentials) : []
-            });
+            logger.logCredentials('Updating', type || 'unknown', !!credentials, credentials ? Object.keys(credentials) : []);
             
             const encryptedCredentials = credentials ? EncryptionUtil.encrypt(JSON.stringify(credentials)) : null;
             
-            console.log('🔐 Encryption result:', {
-                encrypted: encryptedCredentials ? 'ENCRYPTED_DATA_PRESENT' : 'NULL',
-                encrypted_length: encryptedCredentials ? encryptedCredentials.length : 0
-            });
+            logger.logEncryption('Credentials encrypted', !!encryptedCredentials, encryptedCredentials ? encryptedCredentials.length : 0);
 
             let query = `
                 UPDATE gps_providers 
@@ -389,7 +363,7 @@ class GPSProviderManager extends BaseManager {
             
             return { changes: result.changes };
         } catch (error) {
-            console.error('❌ Error updating provider:', error);
+            logger.error('Error updating provider', error);
             throw error;
         }
     }
@@ -426,17 +400,43 @@ class GPSProviderManager extends BaseManager {
 
             // Delete related trailers if requested
             if (deleteRelatedTrailers && provider.trailer_count > 0) {
-                console.log(`🗑️ Deleting ${provider.trailer_count} trailers related to provider: ${providerId}`);
+                logger.info(`🗑️ Deleting ${provider.trailer_count} trailers related to provider: ${providerId}`);
                 
-                const deleteTrailersQuery = `
+                // Delete trailers by provider_id first
+                let deleteTrailersQuery = `
                     DELETE FROM persistent_trailers 
                     WHERE provider_id = ? AND company_id = ?
                 `;
                 
-                const trailerResult = await executeSingleQuery(tx, deleteTrailersQuery, [providerId, provider.company_id]);
+                let trailerResult = await executeSingleQuery(tx, deleteTrailersQuery, [providerId, provider.company_id]);
                 deletedTrailersCount = trailerResult.changes;
                 
-                console.log(`✅ Deleted ${deletedTrailersCount} trailers for provider: ${providerId}`);
+                // If no trailers were deleted by provider_id, try deleting by company_id
+                // This handles cases where trailers were created before provider_id was properly set
+                if (deletedTrailersCount === 0) {
+                    logger.info(`🔍 No trailers found with provider_id, checking for trailers by company_id: ${provider.company_id}`);
+                    
+                    // Get count of trailers for this company
+                    const countQuery = `
+                        SELECT COUNT(*) as count FROM persistent_trailers 
+                        WHERE company_id = ?
+                    `;
+                    const countResult = await executeQueryFirst(tx, countQuery, [provider.company_id]);
+                    
+                    if (countResult.count > 0) {
+                        logger.info(`🗑️ Found ${countResult.count} trailers by company_id, deleting them`);
+                        
+                        deleteTrailersQuery = `
+                            DELETE FROM persistent_trailers 
+                            WHERE company_id = ?
+                        `;
+                        
+                        trailerResult = await executeSingleQuery(tx, deleteTrailersQuery, [provider.company_id]);
+                        deletedTrailersCount = trailerResult.changes;
+                    }
+                }
+                
+                logger.info(`✅ Deleted ${deletedTrailersCount} trailers for provider: ${providerId}`);
             }
 
             // Delete the provider
@@ -453,7 +453,7 @@ class GPSProviderManager extends BaseManager {
                 throw new Error('Provider not found or access denied');
             }
             
-            console.log(`✅ Provider deleted: ${providerId}, deleted trailers: ${deletedTrailersCount}`);
+            logger.info(`✅ Provider deleted: ${providerId}, deleted trailers: ${deletedTrailersCount}`);
             
             return { 
                 changes: result.changes, 

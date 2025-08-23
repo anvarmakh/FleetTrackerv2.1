@@ -40,9 +40,6 @@ class SystemNotesManager extends BaseManager {
      */
     async createNote(entityType, entityId, userId, noteData, tenantId = null) {
         try {
-            // Debug: Log the parameters
-            console.log('🔍 createNote called with:', { entityType, entityId, userId, noteData, tenantId });
-            
             const { content, category = 'general' } = noteData;
             
             if (!content || content.trim().length === 0) {

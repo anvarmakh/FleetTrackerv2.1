@@ -352,7 +352,7 @@ const LocationEditModal: React.FC<LocationEditModalProps> = ({
       {/* Basic Information */}
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="name" className="text-sm font-semibold text-gray-700">Location Name *</Label>
+          <Label htmlFor="name" className="text-sm font-semibold">Location Name *</Label>
           <Input
             id="name"
             placeholder="Enter location name"

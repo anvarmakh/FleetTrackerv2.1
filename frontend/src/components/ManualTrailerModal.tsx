@@ -20,6 +20,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Plus, Building2, X } from 'lucide-react';
 import { trailerCustomCompaniesAPI } from '@/lib/api';
+import SimpleConfirmationDialog from '@/components/SimpleConfirmationDialog';
 
 interface ManualTrailerModalProps {
   isOpen: boolean;
@@ -61,6 +62,11 @@ export default function ManualTrailerModal({ isOpen, onClose, onSave, companies 
   const [showCustomCompanyForm, setShowCustomCompanyForm] = useState(false);
   const [newCustomCompany, setNewCustomCompany] = useState({ name: '' });
   const [isAddingCustomCompany, setIsAddingCustomCompany] = useState(false);
+  
+  // Duplicate confirmation state
+  const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false);
+  const [pendingTrailerData, setPendingTrailerData] = useState<any>(null);
+  const [duplicateInfo, setDuplicateInfo] = useState({ unitNumber: '', companyName: '' });
 
   // Load custom companies from API on component mount
   useEffect(() => {
@@ -180,19 +186,33 @@ export default function ManualTrailerModal({ isOpen, onClose, onSave, companies 
       return;
     }
 
+    // Prepare trailer data
+    const trailerData = {
+      ...formData,
+      year: formData.year ? parseInt(formData.year) : null,
+      companyId: formData.company_id
+    };
+    delete trailerData.company_id;
+
+    // Get company name for duplicate info
+    const selectedCompany = companies.find(c => c.id === formData.company_id) || 
+                           customCompanies.find(c => c.id === formData.company_id);
+    const companyName = selectedCompany?.name || 'Unknown Company';
+
+    // Show duplicate confirmation
+    setDuplicateInfo({ unitNumber: formData.unit_number, companyName });
+    setPendingTrailerData(trailerData);
+    setShowDuplicateConfirm(true);
+  };
+
+  const handleConfirmCreate = async () => {
+    if (!pendingTrailerData) return;
+
     setIsLoading(true);
     setError(null);
 
     try {
-      // Convert year to number if provided and convert snake_case to camelCase
-      const trailerData = {
-        ...formData,
-        year: formData.year ? parseInt(formData.year) : null,
-        companyId: formData.company_id // Convert snake_case to camelCase
-      };
-      delete trailerData.company_id; // Remove the snake_case version
-
-      await onSave(trailerData);
+      await onSave(pendingTrailerData);
       
       // Reset form and close modal
       setFormData({
@@ -204,12 +224,19 @@ export default function ManualTrailerModal({ isOpen, onClose, onSave, companies 
         status: 'available',
         company_id: ''
       });
+      setShowDuplicateConfirm(false);
+      setPendingTrailerData(null);
       onClose();
     } catch (err: unknown) {
       setError(err.response?.data?.error || 'Failed to create trailer');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCancelDuplicate = () => {
+    setShowDuplicateConfirm(false);
+    setPendingTrailerData(null);
   };
 
   const handleClose = () => {
@@ -231,8 +258,9 @@ export default function ManualTrailerModal({ isOpen, onClose, onSave, companies 
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+    <>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
@@ -480,7 +508,20 @@ export default function ManualTrailerModal({ isOpen, onClose, onSave, companies 
             </Button>
           </DialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
-  );
+              </DialogContent>
+      </Dialog>
+      
+      {/* Duplicate confirmation dialog */}
+      <SimpleConfirmationDialog
+        isOpen={showDuplicateConfirm}
+        onClose={handleCancelDuplicate}
+        onConfirm={handleConfirmCreate}
+        title="Duplicate Unit Number"
+        description={`A trailer with unit number "${duplicateInfo.unitNumber}" already exists in your fleet.\n\nCompany: ${duplicateInfo.companyName}\n\nYou can still create this trailer with the same unit number if needed. This is useful when you have multiple trailers with the same identifier.`}
+        confirmText="Create Anyway"
+        cancelText="Cancel"
+        type="deactivate"
+      />
+    </>
+    );
 } 

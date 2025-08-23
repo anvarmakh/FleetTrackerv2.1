@@ -19,7 +19,7 @@ interface TrailerActionsProps {
   hasActiveFilters: boolean;
   onClearFilters: () => void;
   activeStatsFilter: string | null;
-  filters: { status: string; company: string; gpsStatus: string; maintenance: string };
+  filters: { status: string; company: string; maintenance: string };
   activeLocationFilter: { lat: number; lng: number; name: string } | null;
 }
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { PRESET_COLORS } from '@/types';
 
 interface ColorPickerProps {
@@ -25,10 +26,12 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ value, onChange, label }) => 
       />
       <div className="flex gap-1">
         {PRESET_COLORS.map((color) => (
-          <button
+          <Button
             key={color}
             type="button"
-            className="w-6 h-6 rounded border border-gray-300 hover:scale-110 transition-transform"
+            variant="outline"
+            size="sm"
+            className="w-6 h-6 p-0 hover:scale-110 transition-transform"
             style={{ backgroundColor: color }}
             onClick={() => onChange(color)}
           />

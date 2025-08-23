@@ -1,6 +1,6 @@
 import React from 'react';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 interface ToggleSettingProps {
   label: string;
@@ -20,18 +20,10 @@ const ToggleSetting: React.FC<ToggleSettingProps> = ({
       <Label>{label}</Label>
       <p className="text-sm text-muted-foreground">{description}</p>
     </div>
-    <Select 
-      value={value ? "true" : "false"} 
-      onValueChange={(val) => onChange(val === "true")}
-    >
-      <SelectTrigger className="w-24">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="true">On</SelectItem>
-        <SelectItem value="false">Off</SelectItem>
-      </SelectContent>
-    </Select>
+    <Switch 
+      checked={value}
+      onCheckedChange={onChange}
+    />
   </div>
 );
 

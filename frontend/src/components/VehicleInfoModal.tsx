@@ -21,10 +21,35 @@ import {
   Settings,
   ExternalLink
 } from 'lucide-react';
+import { formatDateInTimezone, formatDateOnlyInTimezone } from '@/lib/utils';
 import LocationEditModal from './LocationEditModal';
 import TrailerEditModal from '@/pages/trailers/components/TrailerEditModal';
 import NotesModal from './NotesModal';
 import { maintenanceAPI } from '@/lib/api';
+
+// Helper function to format addresses consistently
+const formatAddress = (address: string | null | undefined): string => {
+  if (!address || address.trim() === '') {
+    return 'No location';
+  }
+  
+  // Check if address is a JSON string and parse it
+  if (address.startsWith('{') && address.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(address);
+      if (parsed.city && parsed.state) {
+        return `${parsed.city}, ${parsed.state}`;
+      }
+      if (parsed.street && parsed.city && parsed.state) {
+        return `${parsed.street}, ${parsed.city}, ${parsed.state}`;
+      }
+    } catch (e) {
+      // If parsing fails, return the original address
+    }
+  }
+  
+  return address;
+};
 
 interface Trailer {
   id: string;
@@ -173,12 +198,14 @@ const VehicleInfoModal: React.FC<VehicleInfoModalProps> = ({
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'Not set';
-    return new Date(dateString).toLocaleDateString();
+    const userTimezone = localStorage.getItem('userTimezone') || 'America/Chicago';
+    return formatDateOnlyInTimezone(dateString, userTimezone, true); // Show timezone indicator
   };
 
   const formatDateTime = (dateString?: string) => {
     if (!dateString) return 'Never';
-    return new Date(dateString).toLocaleString();
+    const userTimezone = localStorage.getItem('userTimezone') || 'America/Chicago';
+    return formatDateInTimezone(dateString, userTimezone, {}, true); // Show timezone indicator
   };
 
   const getStatusBadge = (status: string) => {
@@ -472,7 +499,7 @@ const VehicleInfoModal: React.FC<VehicleInfoModalProps> = ({
                     {/* Display location with proper source detection */}
                     {(() => {
                       const isManualOverride = normalizedTrailer.locationSource === 'manual' && normalizedTrailer.manualLocationNotes;
-                      const locationText = normalizedTrailer.lastAddress || normalizedTrailer.address || 'No location data';
+                      const locationText = formatAddress(normalizedTrailer.lastAddress || normalizedTrailer.address);
                       
                       if (isManualOverride) {
                         return (
@@ -584,7 +611,7 @@ const VehicleInfoModal: React.FC<VehicleInfoModalProps> = ({
                           </div>
                           {alert.due && (
                             <div className="text-sm mt-1">
-                              Due: {alert.due.toLocaleDateString()}
+                              Due: {formatDate(alert.due)}
                             </div>
                           )}
                         </div>

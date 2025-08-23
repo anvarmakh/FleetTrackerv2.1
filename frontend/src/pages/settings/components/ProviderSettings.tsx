@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Edit, Trash2, Wifi, RefreshCw } from 'lucide-react';
+import { formatDateOnlyInTimezone } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { providerAPI } from '@/lib/api';
 import { Company, Provider, EditingProvider, PROVIDER_TYPES } from '@/types';
@@ -435,7 +436,10 @@ const ProviderSettings: React.FC<ProviderSettingsProps> = ({ providers, companie
                     <TableCell className="text-center">{provider.trailer_count || 0}</TableCell>
                     <TableCell className="text-center">
                       {provider.last_sync 
-                        ? new Date(provider.last_sync).toLocaleDateString()
+                        ? (() => {
+                            const userTimezone = localStorage.getItem('userTimezone') || 'America/Chicago';
+                            return formatDateOnlyInTimezone(provider.last_sync, userTimezone, true); // Show timezone indicator for date display
+                          })()
                         : 'Never'
                       }
                     </TableCell>

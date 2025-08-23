@@ -25,6 +25,7 @@ const BaseManager = require('./baseManager');
 const { validateRoleCanBeModified, validateRoleCanBeDeleted, validateRoleCanBeCreated } = require('../../utils/role-constants');
 const { normalizePagination, buildPaginationClause, createPaginatedResponse, getDefaultPaginationForType } = require('../../utils/pagination');
 const cacheService = require('../../services/cache-service');
+const logger = require('../../utils/logger');
 
 class UserManager extends BaseManager {
     constructor(db) {
@@ -272,13 +273,13 @@ class UserManager extends BaseManager {
         }
 
         // Verify password using encryption utility (bcrypt)
-        console.log(`🔐 Verifying password for user: ${userRecord.email}`);
+        logger.info('Verifying password for user', { email: userRecord.email });
         const isPasswordValid = await encryptionUtil.comparePassword(password, userRecord.passwordHash);
         if (!isPasswordValid) {
             return null;
         }
 
-        console.log(`✅ Password verified successfully for user: ${userRecord.email}`);
+        logger.info('Password verified successfully for user', { email: userRecord.email });
 
         // Update last login timestamp
         await this.execute(
@@ -323,7 +324,7 @@ class UserManager extends BaseManager {
                 }
             }
 
-            console.log(`🔍 Updating user profile for user ${userId}:`, { firstName, lastName, email, phone, timezone, language });
+
             
             const userUpdates = { first_name: firstName, last_name: lastName, email: email?.toLowerCase(), phone, timezone, language };
             const result = await this.updateEntity('users', userId, userUpdates);
@@ -331,7 +332,7 @@ class UserManager extends BaseManager {
             // Invalidate user profile cache
             cacheService.delete(`${CACHE_KEYS.USER_PROFILE}:${userId}`);
             
-            console.log(`✅ User profile update result:`, { changes: result.changes, userId });
+            logger.info('User profile updated', { userId, changes: result.changes });
 
             return result;
         });
@@ -589,7 +590,7 @@ class UserManager extends BaseManager {
 
             const { firstName, lastName, email, phone, organizationRole, companyId } = updates;
 
-            console.log(`🔍 Updating user ${userId} with data:`, { firstName, lastName, email, phone, organizationRole, companyId });
+
 
             // Update user basic info (company_id doesn't exist in users table)
             const result = await executeSingleQuery(tx, `
@@ -678,7 +679,7 @@ class UserManager extends BaseManager {
                 throw new Error('User ID is required');
             }
 
-            console.log(`🔍 Attempting to deactivate user with ID: ${userId}`);
+
             
             // First, let's check if the user exists and their current status
             const userCheck = await executeQueryFirst(tx, `

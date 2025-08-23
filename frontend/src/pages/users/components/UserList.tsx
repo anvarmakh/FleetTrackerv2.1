@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Plus, X, Search, UserCheck, UserX } from 'lucide-react';
+import { formatDateInTimezone } from '@/lib/utils';
 import { User } from '@/types';
 
 interface UserListProps {
@@ -28,7 +29,7 @@ const UserList: React.FC<UserListProps> = ({
 }) => {
   const getUserRoleBadge = (role: string) => {
     const roleConfig = {
-      superadmin: { label: 'Super Admin', className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400' },
+              systemadmin: { label: 'System Admin', className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400' },
       owner: { label: 'Owner', className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400' },
       admin: { label: 'Admin', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' },
       manager: { label: 'Manager', className: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' },
@@ -129,13 +130,16 @@ const UserList: React.FC<UserListProps> = ({
                   <TableCell>{getUserStatusBadge(user.isActive || user.is_active || false)}</TableCell>
                   <TableCell>
                     {user.lastLogin || user.last_login
-                      ? new Date(user.lastLogin || user.last_login).toLocaleString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })
+                      ? (() => {
+                          const userTimezone = localStorage.getItem('userTimezone') || 'America/Chicago';
+                          return formatDateInTimezone(user.lastLogin || user.last_login, userTimezone, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }, true); // Show timezone indicator
+                        })()
                       : 'Never'
                     }
                   </TableCell>

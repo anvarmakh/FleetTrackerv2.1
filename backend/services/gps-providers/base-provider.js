@@ -69,6 +69,8 @@ class BaseGPSProvider {
             id: data.id,
             unit_number: cleanUnitNumber,
             provider_id: this.providerName,
+            deviceId: data.deviceId || data.originalId || data.id,
+            originalId: data.originalId || data.deviceId || data.id,
             last_latitude: parseFloat(data.latitude) || 0,
             last_longitude: parseFloat(data.longitude) || 0,
             status: data.status || 'available',
@@ -77,7 +79,12 @@ class BaseGPSProvider {
             model: data.model || null,
             year: data.year || null,
             vin: data.vin || null,
-            plate: data.plate || null
+            plate: data.plate || null,
+            address: data.address || null,
+            last_address: data.last_address || data.address || null,
+            lastUpdate: data.lastUpdate || new Date(),
+            manual_location_override: data.manual_location_override || false,
+            company_id: data.company_id || null
         };
     }
 

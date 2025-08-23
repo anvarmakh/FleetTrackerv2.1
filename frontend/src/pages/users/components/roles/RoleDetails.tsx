@@ -17,12 +17,12 @@ const RoleDetails: React.FC<RoleDetailsProps> = ({
 }) => {
   const getRoleIcon = (roleName: string) => {
     switch (roleName.toLowerCase()) {
-      case 'owner': return <Crown className="w-4 h-4 text-purple-600" />;
-      case 'admin': return <Shield className="w-4 h-4 text-blue-600" />;
-      case 'manager': return <Target className="w-4 h-4 text-green-600" />;
-      case 'user': return <UserIcon className="w-4 h-4 text-gray-600" />;
-      case 'viewer': return <Eye className="w-4 h-4 text-gray-500" />;
-      default: return <UserIcon className="w-4 h-4 text-gray-600" />;
+      case 'owner': return <Crown className="w-4 h-4 text-purple-600 dark:text-purple-400" />;
+      case 'admin': return <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
+      case 'manager': return <Target className="w-4 h-4 text-green-600 dark:text-green-400" />;
+      case 'user': return <UserIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />;
+      case 'viewer': return <Eye className="w-4 h-4 text-gray-500 dark:text-gray-400" />;
+      default: return <UserIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />;
     }
   };
 
@@ -37,7 +37,7 @@ const RoleDetails: React.FC<RoleDetailsProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Role Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -89,21 +89,16 @@ const RoleDetails: React.FC<RoleDetailsProps> = ({
         </div>
       </div>
 
-      {/* Role Description */}
-      <div>
-        <p className="text-muted-foreground mb-3">{selectedRole.description}</p>
-        <div className="text-sm text-muted-foreground">
-          {selectedRole.permissions?.length || 0} permissions
+      {/* Role Description - Compact */}
+      <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center gap-4">
+          <span className="text-muted-foreground">{selectedRole.description}</span>
+          <span className="text-muted-foreground">• {selectedRole.permissions?.length || 0} permissions</span>
         </div>
         {isProtectedRole(selectedRole.name) && (
-          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
-            <div className="flex items-center gap-2 text-amber-800">
-              <Shield className="w-4 h-4" />
-              <span className="text-sm font-medium">Protected Role</span>
-            </div>
-            <p className="text-xs text-amber-700 mt-1">
-              {ROLE_PROTECTION_MESSAGES.CANNOT_MODIFY}
-            </p>
+          <div className="flex items-center gap-2 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded text-xs">
+            <Shield className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+            <span className="text-amber-700 dark:text-amber-300 font-medium">Protected</span>
           </div>
         )}
       </div>

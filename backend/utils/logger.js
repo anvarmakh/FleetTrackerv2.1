@@ -113,6 +113,67 @@ class Logger {
             type: 'gps_sync'
         });
     }
+
+    // Secure logging utilities
+    logCredentials(operation, providerType, hasCredentials = false, credentialKeys = []) {
+        this.info(`🔐 ${operation} ${providerType} provider`, {
+            operation,
+            providerType,
+            hasCredentials,
+            credentialKeys,
+            type: 'credentials'
+        });
+    }
+
+    logApiRequest(method, url, hasAuth = false, responseStatus = null, dataLength = null) {
+        const sanitizedUrl = this.sanitizeUrl(url);
+        this.info(`🌐 ${method} ${sanitizedUrl}`, {
+            method,
+            url: sanitizedUrl,
+            hasAuth,
+            responseStatus,
+            dataLength,
+            type: 'api_request'
+        });
+    }
+
+    logProviderSync(provider, action, details = {}) {
+        this.info(`📡 ${provider} ${action}`, {
+            provider,
+            action,
+            ...details,
+            type: 'provider_sync'
+        });
+    }
+
+    // Sanitize URLs to remove sensitive parameters
+    sanitizeUrl(url) {
+        try {
+            const urlObj = new URL(url);
+            const sensitiveParams = ['password', 'token', 'key', 'secret', 'auth'];
+            
+            sensitiveParams.forEach(param => {
+                if (urlObj.searchParams.has(param)) {
+                    urlObj.searchParams.set(param, '***');
+                }
+            });
+            
+            return urlObj.toString();
+        } catch (error) {
+            // If URL parsing fails, return a sanitized string
+            return url.replace(/(password|token|key|secret|auth)=[^&]*/gi, '$1=***');
+        }
+    }
+
+    // Log sensitive operations without exposing data
+    logEncryption(operation, hasData = false, dataLength = null) {
+        this.info(`🔐 ${operation}`, {
+            operation,
+            hasData,
+            dataLength,
+            type: 'encryption'
+        });
+    }
 }
 
 // Create singleton instance

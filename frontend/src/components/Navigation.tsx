@@ -140,7 +140,7 @@ const Navigation = () => {
     
     // Define permission hierarchy for navigation
     const rolePermissions: Record<string, string[]> = {
-      'superadmin': ['users_view', 'companies_view', 'providers_view', 'roles_view', 'maintenance_settings_view', 'company_preferences_view'],
+              'systemadmin': ['users_view', 'companies_view', 'providers_view', 'roles_view', 'maintenance_settings_view', 'company_preferences_view'],
       'owner': ['users_view', 'companies_view', 'providers_view', 'roles_view', 'maintenance_settings_view', 'company_preferences_view'],
       'admin': ['users_view', 'companies_view', 'providers_view', 'roles_view', 'maintenance_settings_view', 'company_preferences_view'],
       'manager': ['companies_view', 'providers_view'], // Managers can't manage users

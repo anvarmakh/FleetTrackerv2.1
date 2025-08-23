@@ -398,9 +398,7 @@ router.post('/:id/sync', authenticateToken, validateTenant, asyncHandler(async (
         const { trailerManager } = require('../database/database-manager');
         let createdCount = 0;
         let updatedCount = 0;
-        let activeAssets = 0; // ADD: Counter for active assets
-
-
+        let activeAssets = 0;
 
         // Helper function to clean unit names
         const cleanUnitName = (name) => {
@@ -433,9 +431,24 @@ router.post('/:id/sync', authenticateToken, validateTenant, asyncHandler(async (
                     // Clean the unit name
                     const cleanName = cleanUnitName(asset.name || asset.assetName || asset.id);
                     
-                    // Check if trailer already exists
+                    // Check if trailer already exists by multiple criteria
                     const externalId = asset.id || asset.assetId;
-                    const existingTrailer = await trailerManager.getTrailerByExternalId(externalId, req.user.companyId);
+                    let existingTrailer = null;
+                    
+                    // Try to find existing trailer by external_id first
+                    if (externalId) {
+                        existingTrailer = await trailerManager.getTrailerByDeviceId(externalId, req.user.companyId);
+                    }
+                    
+                    // If not found by external_id, try by unit_number
+                    if (!existingTrailer && cleanName) {
+                        existingTrailer = await trailerManager.getTrailerByDeviceId(cleanName, req.user.companyId);
+                    }
+                    
+                    // If not found by unit_number, try by VIN
+                    if (!existingTrailer && asset.vin) {
+                        existingTrailer = await trailerManager.getTrailerByDeviceId(asset.vin, req.user.companyId);
+                    }
                     
                     if (existingTrailer) {
                         // Update existing trailer
