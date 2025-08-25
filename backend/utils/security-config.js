@@ -29,11 +29,15 @@ const ENCRYPTION_CONFIG = {
     // Maximum password length
     MAX_PASSWORD_LENGTH: 128,
     
-    // JWT token expiration time (reduced for better security)
-    JWT_EXPIRATION: process.env.NODE_ENV === 'production' ? '4h' : '24h',
+    // JWT token expiration time (increased for better UX)
+    JWT_EXPIRATION: process.env.JWT_ACCESS_TOKEN_EXPIRY ? 
+      `${parseInt(process.env.JWT_ACCESS_TOKEN_EXPIRY)}s` : 
+      (process.env.NODE_ENV === 'production' ? '24h' : '7d'),
     
     // Refresh token expiration time
-    REFRESH_TOKEN_EXPIRATION: '7d',
+    REFRESH_TOKEN_EXPIRATION: process.env.JWT_REFRESH_TOKEN_EXPIRY ? 
+      `${parseInt(process.env.JWT_REFRESH_TOKEN_EXPIRY)}s` : 
+      '7d',
     
     // Rate limiting settings
     RATE_LIMITS: {

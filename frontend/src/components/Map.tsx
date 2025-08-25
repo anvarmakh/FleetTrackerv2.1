@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,8 @@ interface Trailer {
   gpsStatus?: string;
   last_sync?: string;
   lastSync?: string;
+  lastAddress?: string;
+  address?: string;
 }
 
 interface MapProps {
@@ -50,6 +52,56 @@ const Map: React.FC<MapProps> = ({ trailers }) => {
   const [selectedStyle, setSelectedStyle] = useState(resolvedTheme === 'dark' ? 'dark' : 'light');
   const [userManuallySelected, setUserManuallySelected] = useState(false);
 
+  // Store event handler references for cleanup
+  const eventHandlers = useRef<{
+    load?: () => void;
+    mouseenter?: () => void;
+    mouseleave?: () => void;
+    click?: (e: any) => void;
+    mapClick?: (e: any) => void;
+  }>({});
+
+  // Memoize valid trailers to prevent unnecessary re-renders
+  const validTrailers = useMemo(() => {
+    return trailers.filter(trailer => {
+      const lat = trailer.lastLatitude;
+      const lng = trailer.lastLongitude;
+      return lat && lng && !isNaN(lat) && !isNaN(lng);
+    });
+  }, [trailers]);
+
+  // Memoize the map style to prevent unnecessary style changes
+  const mapStyle = useMemo(() => {
+    return MAP_STYLES[selectedStyle as keyof typeof MAP_STYLES] || MAP_STYLES.light;
+  }, [selectedStyle]);
+
+  // Memoize GeoJSON data to prevent unnecessary updates
+  const geojsonData = useMemo(() => {
+    return {
+      type: 'FeatureCollection' as const,
+      features: validTrailers.map(trailer => ({
+        type: 'Feature' as const,
+        geometry: {
+          type: 'Point' as const,
+          coordinates: [trailer.lastLongitude, trailer.lastLatitude] as [number, number]
+        },
+        properties: {
+          id: trailer.id,
+          unitNumber: trailer.unit_number || trailer.unitNumber,
+          status: trailer.status,
+          companyName: trailer.companyName,
+          companyColor: trailer.companyColor || '#6b7280', // Default color if none provided
+          address: trailer.lastAddress || trailer.address,
+          lastSync: trailer.last_sync || trailer.lastSync
+        }
+      }))
+    };
+  }, [validTrailers]);
+
+  // Create a stable reference for the data source update
+  const dataSourceRef = useRef(geojsonData);
+  dataSourceRef.current = geojsonData;
+
   // Update selectedStyle when theme changes (only if user hasn't manually selected)
   useEffect(() => {
     if (!userManuallySelected) {
@@ -78,210 +130,182 @@ const Map: React.FC<MapProps> = ({ trailers }) => {
         map.current.removeSource('trailers');
       }
     } catch (error) {
-  
+      console.error('Error removing existing trailer data:', error);
     }
 
-    // Filter trailers with valid coordinates
-    const validTrailers = trailers.filter(trailer => {
-      const lat = trailer.lastLatitude;
-      const lng = trailer.lastLongitude;
-      return lat && lng;
-    });
-    
     if (validTrailers.length === 0) {
       return;
     }
 
     try {
-      // Convert trailers to GeoJSON format
-      const geojsonData = {
-        type: 'FeatureCollection',
-        features: validTrailers.map(trailer => ({
-          type: 'Feature',
-          geometry: {
-            type: 'Point',
-            coordinates: [trailer.lastLongitude, trailer.lastLatitude]
-          },
-          properties: {
-            id: trailer.id,
-            unit_number: trailer.unit_number || trailer.unitNumber,
-            unitNumber: trailer.unit_number || trailer.unitNumber,
-            status: trailer.status,
-            address: trailer.lastAddress,
-            companyId: trailer.companyId,
-            companyName: trailer.companyName,
-            companyColor: trailer.companyColor,
-            gpsStatus: trailer.gps_status || trailer.gpsStatus,
-            lastSync: trailer.last_sync || trailer.lastSync,
-            // Color coding
-            color: trailer.status === 'available' ? '#22c55e' : 
-                   trailer.status === 'dispatched' ? '#3b82f6' : '#ef4444'
+      // Add the trailer data source
+      if (!map.current) return;
+      
+      map.current.addSource('trailers', {
+        type: 'geojson',
+        data: geojsonData
+      });
+
+      // Add individual trailer markers with better design
+      map.current.addLayer({
+        id: 'trailers',
+        type: 'circle',
+        source: 'trailers',
+        paint: {
+          'circle-color': ['get', 'companyColor'],
+          'circle-radius': 5,
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-opacity': 0.9
+        }
+      });
+
+      // Add hover effects
+      map.current.on('mouseenter', 'trailers', () => {
+        if (map.current) {
+          map.current.getCanvas().style.cursor = 'pointer';
+        }
+      });
+
+      map.current.on('mouseleave', 'trailers', () => {
+        if (map.current) {
+          map.current.getCanvas().style.cursor = '';
+        }
+      });
+    } catch (error) {
+      console.error('Error adding trailer data to map:', error);
+    }
+
+    // Add popup for individual trailers
+    try {
+      if (!map.current) return;
+      
+      // Store the click handler reference
+      const clickHandler = (e: any) => {
+        // Close any existing popup
+        if (currentPopup.current) {
+          currentPopup.current.remove();
+          currentPopup.current = null;
+        }
+
+        if (e.features && e.features[0]) {
+          const feature = e.features[0];
+          const properties = feature.properties;
+          
+          if (properties) {
+            const geometry = feature.geometry as unknown as { coordinates: [number, number] };
+            const coordinates: [number, number] = [geometry.coordinates[0], geometry.coordinates[1]];
+            
+            // Create simple popup content
+            const getStatusColor = (status: string) => {
+              switch (status.toLowerCase()) {
+                case 'available': return '#22c55e';
+                case 'dispatched': return '#3b82f6';
+                case 'maintenance': return '#eab308';
+                case 'out_of_service': return '#ef4444';
+                default: return '#6b7280';
+              }
+            };
+
+            // Simple city/state extraction
+            const extractCityState = (address: string) => {
+              if (!address) return '';
+              
+              const cleanAddress = address.trim();
+              
+              // Look for patterns like "City, State" or "Street, City, State"
+              if (cleanAddress.includes(',')) {
+                const parts = cleanAddress.split(',').map(part => part.trim());
+                
+                // If we have at least 2 parts, try to extract city and state
+                if (parts.length >= 2) {
+                  // For "Street, City, State" format, city is second to last, state is last
+                  const city = parts[parts.length - 2];
+                  const state = parts[parts.length - 1];
+                  
+                  // Clean state (remove ZIP if present)
+                  const cleanState = state.split(' ')[0];
+                  
+                  // Validate state looks like a state code
+                  if (cleanState && cleanState.length === 2 && /^[A-Z]{2}$/.test(cleanState)) {
+                    return `${city}, ${cleanState}`;
+                  }
+                }
+              }
+              
+              // If no comma pattern, try space-separated "City State"
+              const words = cleanAddress.split(' ');
+              if (words.length >= 2) {
+                const lastWord = words[words.length - 1];
+                if (lastWord.length === 2 && /^[A-Z]{2}$/.test(lastWord)) {
+                  const city = words.slice(0, -1).join(' ');
+                  return `${city}, ${lastWord}`;
+                }
+              }
+              
+              return cleanAddress;
+            };
+
+            const cityState = extractCityState(properties.address || '');
+
+            const popupContent = `
+              <div style="padding: 8px; min-width: 200px; max-width: 250px; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px; color: #111827;">
+                  ${properties.unit_number || properties.unitNumber || 'Unknown'}
+                </div>
+                <div style="font-size: 12px; color: ${getStatusColor(properties.status)}; margin-bottom: 4px; text-transform: uppercase;">
+                  ${properties.status.replace(/_/g, ' ')}
+                </div>
+                ${properties.companyName ? `
+                  <div style="font-size: 12px; color: ${properties.companyColor || '#6b7280'}; margin-bottom: 4px;">
+                    ${properties.companyName}
+                  </div>
+                ` : ''}
+                ${cityState ? `
+                  <div style="font-size: 11px; color: #6b7280; line-height: 1.3; font-weight: 500;">
+                    ${cityState}
+                  </div>
+                ` : ''}
+              </div>
+            `;
+            
+            // Create and show popup
+            currentPopup.current = new mapboxgl.Popup({
+              closeButton: false,
+              closeOnClick: false,
+              maxWidth: '250px',
+              offset: 10
+            })
+            .setLngLat(coordinates)
+            .setHTML(popupContent)
+            .addTo(map.current!);
           }
-        }))
+        }
       };
 
-      // Add the trailer data source
-      try {
-        if (!map.current) return;
+      // Store the map click handler reference
+      const mapClickHandler = (e: any) => {
+        // Check if click was on a trailer marker
+        const features = map.current!.queryRenderedFeatures(e.point, { layers: ['trailers'] });
         
-        map.current.addSource('trailers', {
-          type: 'geojson',
-          data: geojsonData
-        });
+        // If no trailer was clicked, close the popup
+        if (features.length === 0 && currentPopup.current) {
+          currentPopup.current.remove();
+          currentPopup.current = null;
+        }
+      };
 
-        // Add individual trailer markers with better design
-        map.current.addLayer({
-          id: 'trailers',
-          type: 'circle',
-          source: 'trailers',
-          paint: {
-            'circle-color': ['get', 'color'],
-            'circle-radius': 5,
-            'circle-stroke-width': 2,
-            'circle-stroke-color': '#ffffff',
-            'circle-stroke-opacity': 0.9
-          }
-        });
+      // Store handlers for cleanup
+      eventHandlers.current.click = clickHandler;
+      eventHandlers.current.mapClick = mapClickHandler;
 
-        // Add hover effects
-        map.current.on('mouseenter', 'trailers', () => {
-          if (map.current) {
-            map.current.getCanvas().style.cursor = 'pointer';
-          }
-        });
-
-        map.current.on('mouseleave', 'trailers', () => {
-          if (map.current) {
-            map.current.getCanvas().style.cursor = '';
-          }
-        });
-      } catch (error) {
-        console.error('Error adding trailer data to map:', error);
-      }
-
-      // Add popup for individual trailers
-      try {
-        if (!map.current) return;
-        
-        map.current.on('click', 'trailers', (e) => {
-          // Close any existing popup
-          if (currentPopup.current) {
-            currentPopup.current.remove();
-            currentPopup.current = null;
-          }
-
-          if (e.features && e.features[0]) {
-            const feature = e.features[0];
-            const properties = feature.properties;
-            
-            if (properties) {
-              const coordinates = (feature.geometry as { coordinates: [number, number] }).coordinates.slice();
-              
-              // Create simple popup content
-              const getStatusColor = (status: string) => {
-                switch (status.toLowerCase()) {
-                  case 'available': return '#22c55e';
-                  case 'dispatched': return '#3b82f6';
-                  case 'maintenance': return '#eab308';
-                  case 'out_of_service': return '#ef4444';
-                  default: return '#6b7280';
-                }
-              };
-
-              // Simple city/state extraction
-              const extractCityState = (address: string) => {
-                if (!address) return '';
-                
-                const cleanAddress = address.trim();
-                
-                // Look for patterns like "City, State" or "Street, City, State"
-                if (cleanAddress.includes(',')) {
-                  const parts = cleanAddress.split(',').map(part => part.trim());
-                  
-                  // If we have at least 2 parts, try to extract city and state
-                  if (parts.length >= 2) {
-                    // For "Street, City, State" format, city is second to last, state is last
-                    const city = parts[parts.length - 2];
-                    const state = parts[parts.length - 1];
-                    
-                    // Clean state (remove ZIP if present)
-                    const cleanState = state.split(' ')[0];
-                    
-                    // Validate state looks like a state code
-                    if (cleanState && cleanState.length === 2 && /^[A-Z]{2}$/.test(cleanState)) {
-                      return `${city}, ${cleanState}`;
-                    }
-                  }
-                }
-                
-                // If no comma pattern, try space-separated "City State"
-                const words = cleanAddress.split(' ');
-                if (words.length >= 2) {
-                  const lastWord = words[words.length - 1];
-                  if (lastWord.length === 2 && /^[A-Z]{2}$/.test(lastWord)) {
-                    const city = words.slice(0, -1).join(' ');
-                    return `${city}, ${lastWord}`;
-                  }
-                }
-                
-                return cleanAddress;
-              };
-
-              const cityState = extractCityState(properties.address || '');
-
-              const popupContent = `
-                <div style="padding: 8px; min-width: 200px; max-width: 250px; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                  <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px; color: #111827;">
-                    ${properties.unit_number || properties.unitNumber || 'Unknown'}
-                  </div>
-                  <div style="font-size: 12px; color: ${getStatusColor(properties.status)}; margin-bottom: 4px; text-transform: uppercase;">
-                    ${properties.status.replace(/_/g, ' ')}
-                  </div>
-                  ${properties.companyName ? `
-                    <div style="font-size: 12px; color: ${properties.companyColor || '#6b7280'}; margin-bottom: 4px;">
-                      ${properties.companyName}
-                    </div>
-                  ` : ''}
-                  ${cityState ? `
-                    <div style="font-size: 11px; color: #6b7280; line-height: 1.3; font-weight: 500;">
-                      ${cityState}
-                    </div>
-                  ` : ''}
-                </div>
-              `;
-              
-              // Create and show popup
-              currentPopup.current = new mapboxgl.Popup({
-                closeButton: false,
-                closeOnClick: false,
-                maxWidth: '250px',
-                offset: 10
-              })
-              .setLngLat(coordinates)
-              .setHTML(popupContent)
-              .addTo(map.current!);
-            }
-          }
-        });
-
-        // Add click handler to close popup when clicking on map background
-        map.current.on('click', (e) => {
-          // Check if click was on a trailer marker
-          const features = map.current!.queryRenderedFeatures(e.point, { layers: ['trailers'] });
-          
-          // If no trailer was clicked, close the popup
-          if (features.length === 0 && currentPopup.current) {
-            currentPopup.current.remove();
-            currentPopup.current = null;
-          }
-        });
-      } catch (error) {
-        console.error('Error adding popup functionality:', error);
-      }
+      // Add the event listeners
+      map.current.on('click', 'trailers', clickHandler);
+      map.current.on('click', mapClickHandler);
     } catch (error) {
-      console.error('Error processing trailer data:', error);
+      console.error('Error adding popup functionality:', error);
     }
-  }, [trailers]);
+  }, [geojsonData, validTrailers.length]);
 
   const handleTokenSubmit = () => {
     if (mapboxToken?.trim()) {
@@ -301,22 +325,25 @@ const Map: React.FC<MapProps> = ({ trailers }) => {
     
     mapboxgl.accessToken = mapboxToken;
     
-    const initialStyle = resolvedTheme === 'dark' ? 'dark' : 'light';
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: MAP_STYLES[initialStyle as keyof typeof MAP_STYLES],
+      style: mapStyle,
+      center: [-98.5795, 39.8283], // Center of USA
       zoom: 4,
-      center: [-98.5795, 39.8283], // Center of US
+      accessToken: mapboxToken
     });
 
 
 
     // Wait for map to load before adding sources and layers
-    map.current.on('load', () => {
+    const loadHandler = () => {
       // Map loaded successfully
       addTrailerData();
-    });
-  }, [addTrailerData, mapboxToken, resolvedTheme]);
+    };
+    
+    eventHandlers.current.load = loadHandler;
+    map.current.on('load', loadHandler);
+  }, [addTrailerData, mapboxToken, mapStyle]);
 
   const changeMapStyle = useCallback((styleKey: string, isManualSelection = false) => {
     if (map.current && MAP_STYLES[styleKey as keyof typeof MAP_STYLES]) {
@@ -345,21 +372,26 @@ const Map: React.FC<MapProps> = ({ trailers }) => {
     }
   }, [resolvedTheme, isTokenSet, selectedStyle, userManuallySelected, changeMapStyle]);
 
-  // Update data when trailers change
+  // Update data when trailers change - only when the number of valid trailers changes significantly
   useEffect(() => {
-
-    
     // Close any existing popup when data changes
     if (currentPopup.current) {
       currentPopup.current.remove();
       currentPopup.current = null;
     }
     
-    if (map.current && Array.isArray(trailers)) {
-  
-      addTrailerData();
+    if (map.current && map.current.isStyleLoaded()) {
+      // Only update the data source if it exists, don't recreate the entire map
+      const source = map.current.getSource('trailers');
+      if (source && 'setData' in source) {
+        // Use the current data from the ref - this updates only the markers, not the map
+        (source as any).setData(dataSourceRef.current);
+      } else {
+        // If source doesn't exist, add the data (first time)
+        addTrailerData();
+      }
     }
-  }, [trailers, addTrailerData]);
+  }, [validTrailers.length]); // Only depend on the count, not the entire data
 
   useEffect(() => {
     if (isTokenSet && !map.current) {
@@ -369,14 +401,23 @@ const Map: React.FC<MapProps> = ({ trailers }) => {
     
     return () => {
       if (map.current) {
-    
         try {
           // Remove all event listeners first
-          map.current.off('load');
-          map.current.off('mouseenter', 'trailers');
-          map.current.off('mouseleave', 'trailers');
-          map.current.off('click', 'trailers');
-          map.current.off('click');
+          if (eventHandlers.current.load) {
+            map.current.off('load', eventHandlers.current.load);
+          }
+          
+          // Remove layer-specific event listeners using stored handlers
+          if (map.current.getLayer('trailers')) {
+            if (eventHandlers.current.click) {
+              map.current.off('click', 'trailers', eventHandlers.current.click);
+            }
+          }
+          
+          // Remove general click listener using stored handler
+          if (eventHandlers.current.mapClick) {
+            map.current.off('click', eventHandlers.current.mapClick);
+          }
           
           // Clear any existing popup
           if (currentPopup.current) {
@@ -384,10 +425,13 @@ const Map: React.FC<MapProps> = ({ trailers }) => {
             currentPopup.current = null;
           }
           
+          // Clear event handler references
+          eventHandlers.current = {};
+          
           // Remove the map
           map.current.remove();
         } catch (error) {
-  
+          console.error('Error cleaning up map:', error);
         } finally {
           // Ensure map reference is cleared
           map.current = null;
